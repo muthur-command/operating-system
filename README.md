@@ -1,10 +1,15 @@
-# Home Assistant Operating System
+# Muthur Command Operating System
 
-Home Assistant Operating System (formerly HassOS) is a Linux based operating system optimized to host [Home Assistant](https://www.home-assistant.io) and its [Apps](https://www.home-assistant.io/apps/).
+Muthur Command Operating System (MCOS, forked from HAOS) is a Linux based
+operating system optimized to host Muthur Command services and managed apps.
 
-Home Assistant Operating System uses Docker as its container engine. By default it deploys the Home Assistant Supervisor as a container. Home Assistant Supervisor in turn uses the Docker container engine to control Home Assistant Core and Apps in separate containers. Home Assistant Operating System is **not** based on a regular Linux distribution like Ubuntu. It is built using [Buildroot](https://buildroot.org/) and it is optimized to run Home Assistant. It targets single board compute (SBC) devices like the Raspberry Pi or ODROID but also supports x86-64 systems with UEFI.
+MCOS uses Docker as its container engine. By default it deploys the MCIO
+Supervisor as a container. MCIO Supervisor then controls MC stack services in
+separate containers. MCOS is **not** based on a regular Linux distribution like
+Ubuntu. It is built using [Buildroot](https://buildroot.org/) and targets SBC
+devices like Raspberry Pi/ODROID as well as x86-64 systems with UEFI.
 
-[![Home Assistant - A project from the Open Home Foundation](https://www.openhomefoundation.org/badges/home-assistant.png)](https://www.openhomefoundation.org/)
+[![Muthur Command](https://img.shields.io/badge/OS-MCOS-blue)](https://github.com/muthur-command/operating-system)
 
 ## Features
 
@@ -16,22 +21,19 @@ Home Assistant Operating System uses Docker as its container engine. By default 
 
 ## Supported hardware
 
-The list of supported hardware is defined by [ADR-0015](https://github.com/home-assistant/architecture/blob/master/adr/0015-home-assistant-os.md).
-Every new hardware addition must meet at least requirements defined in [ADR-0017](https://github.com/home-assistant/architecture/blob/master/adr/0017-hardware-screening-os.md) and pass through an architecture design proposal.
-
-For documentation explaining details of the individual supported boards, see [Board support](https://developers.home-assistant.io/docs/operating-system/boards/overview) section of the Home Assistant Developer Docs.
+The list of supported hardware is maintained in this repository's board
+metadata and migration planning documents.
 
 ## Getting Started
 
-If you just want to use Home Assistant the official [getting started guide](https://www.home-assistant.io/getting-started/) and [installation instructions](https://www.home-assistant.io/hassio/installation/) take you through how to download Home Assistant Operating System and get it running on your machine.
-
-If you're interested in finding out more about Home Assistant Operating System and how it works read on...
+If you just want to use MCOS, follow your project's installation and release
+notes for the latest images and OTA channels.
 
 ## Development
 
 If you don't have experience with embedded systems, Buildroot or the build process for Linux distributions it is recommended to read up on these topics first (e.g. [Bootlin](https://bootlin.com/docs/) has excellent resources).
 
-The Home Assistant Operating System documentation can be found on the [Home Assistant Developer Docs website](https://developers.home-assistant.io/docs/operating-system).
+Project-specific MCOS documentation is maintained in the mc_os note repository.
 
 ### Components
 
@@ -44,7 +46,7 @@ The Home Assistant Operating System documentation can be found on the [Home Assi
   - [SquashFS](https://www.kernel.org/doc/Documentation/filesystems/squashfs.txt) for read-only file systems (using LZ4 compression)
   - [ZRAM](https://www.kernel.org/doc/Documentation/blockdev/zram.txt) for `/tmp`, `/var` and swap (using LZ4 compression)
 - **Container Platform:**
-  - [Docker Engine](https://docs.docker.com/engine/) for running Home Assistant components in containers
+  - [Docker Engine](https://docs.docker.com/engine/) for running MC components in containers
 - **Updates:**
   - [RAUC](https://rauc.io/) for Over The Air (OTA) and USB updates
 - **Security:**
@@ -53,5 +55,5 @@ The Home Assistant Operating System documentation can be found on the [Home Assi
 ### Development builds
 
 The Development build GitHub Action Workflow is a manually triggered workflow
-which creates Home Assistant OS development builds. The development builds are
-available at [https://os-artifacts.home-assistant.io/index.html](https://os-artifacts.home-assistant.io/index.html).
+which creates MCOS development builds. Development builds are published to the
+configured MCOS artifacts endpoint for the repository environment.

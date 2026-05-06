@@ -2,7 +2,7 @@ VERSION_MAJOR="18"
 VERSION_MINOR="0"
 VERSION_SUFFIX="dev0"
 
-HASSOS_NAME="Home Assistant OS"
-HASSOS_ID="haos"
+HASSOS_NAME="Muthur Command OS"
+HASSOS_ID="mcos"
 
 DEPLOYMENT="development"

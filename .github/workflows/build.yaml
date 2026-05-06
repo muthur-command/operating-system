@@ -64,7 +64,7 @@ jobs:
         env:
           PUBLISH_FLAG: ${{ inputs.publish }}
         run: |
-          if [ "${{ github.repository }}" == "home-assistant/operating-system" ]; then
+          if [ "${{ github.repository }}" == "muthur-command/operating-system" ]; then
             if [ "${PUBLISH_FLAG}" != "true" ] && [ "${{ github.event_name }}" != "release" ]; then
               echo "publish_build=false" >> "$GITHUB_OUTPUT"
             else
@@ -82,7 +82,7 @@ jobs:
           PUBLISH_BUILD: ${{ steps.check_publish.outputs.publish_build }}
         run: |
           version_dev="dev$(date --utc +'%Y%m%d')"
-          if [ "${{ env.PUBLISH_BUILD }}" != "true" ] || [ "${{ github.ref }}" != "refs/heads/dev" ]; then
+          if [ "${{ env.PUBLISH_BUILD }}" != "true" ] || [ "${{ github.ref }}" != "refs/heads/mc" ]; then
             version_dev="dev$(date +%s)"
           fi
           echo "Development version \"${version_dev}\""
@@ -324,7 +324,7 @@ jobs:
             ./ \
             s3://${{ secrets.R2_OS_ARTIFACTS_BUCKET }}/${{ needs.prepare.outputs.version_full }}/ \
             --exclude "*" \
-            --include "haos_*" \
+            --include "mcos_*" \
             --endpoint-url ${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}
 
       - name: Upload release assets
@@ -332,7 +332,7 @@ jobs:
         uses: shogo82148/actions-upload-release-asset@96bc1f0cb850b65efd58a6b5eaa0a69f88d38077 # v1.10.0
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: output/images/haos_*
+          asset_path: output/images/mcos_*
 
       - name: Print cache stats
         run: |
@@ -343,7 +343,7 @@ jobs:
           echo "Cache size after pruning: $(du -sh /mnt/cache/cc)"
 
       - name: "Save cache: object files"
-        if: github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/mc'
         uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: /mnt/cache/cc
@@ -357,17 +357,17 @@ jobs:
           echo "| Container | Version |" >> $GITHUB_STEP_SUMMARY
           echo "|:-|:-|" >> $GITHUB_STEP_SUMMARY
           supervisor_version=$(jq -r ".supervisor" output/build/hassio-*/version.json)
-          landingpage_version=$(curl -fsSL https://api.github.com/repos/home-assistant/landingpage/releases/latest | jq -r '.tag_name')
-          echo "| supervisor | [${supervisor_version}](https://github.com/home-assistant/supervisor/releases/tag/${supervisor_version}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| landingpage | [${landingpage_version}](https://github.com/home-assistant/landingpage/releases/tag/${landingpage_version}) |" >> $GITHUB_STEP_SUMMARY
+          landingpage_version=$(curl -fsSL https://api.github.com/repos/muthur-command/landingpage/releases/latest | jq -r '.tag_name')
+          echo "| supervisor | [${supervisor_version}](https://github.com/muthur-command/supervisor/releases/tag/${supervisor_version}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| landingpage | [${landingpage_version}](https://github.com/muthur-command/landingpage/releases/tag/${landingpage_version}) |" >> $GITHUB_STEP_SUMMARY
           for plugin in dns audio cli multicast observer; do
             version=$(jq -r ".${plugin}" output/build/hassio-*/version.json)
-            echo "| plugin-${plugin} | [${version}](https://github.com/home-assistant/plugin-${plugin}/releases/tag/${version}) |" >> $GITHUB_STEP_SUMMARY
+            echo "| plugin-${plugin} | [${version}](https://github.com/muthur-command/plugin-${plugin}/releases/tag/${version}) |" >> $GITHUB_STEP_SUMMARY
           done
           echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "| File | Size (bytes) | Size (formatted) |" >> $GITHUB_STEP_SUMMARY
           echo "|:-|:-|:-|" >> $GITHUB_STEP_SUMMARY
-          for f in output/images/haos_*; do
+          for f in output/images/mcos_*; do
             echo "| $(basename $f) | $(du -b $f | cut -f1) | $(du -bh $f | cut -f1) |" >> $GITHUB_STEP_SUMMARY
           done
           echo "## Partitions" >> $GITHUB_STEP_SUMMARY
@@ -382,27 +382,27 @@ jobs:
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id != 'ova' }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.img.xz
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.img.xz
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.img.xz
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.img.xz
 
       - name: Upload RAUC bundle artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.raucb
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.raucb
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.raucb
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.raucb
 
       - name: Upload Open Virtualization Format (OVA) artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'ova' }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.ova
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.ova
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.ova
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.ova
 
       - name: Upload QEMU disk image artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -410,36 +410,36 @@ jobs:
         if: ${{ matrix.board.id == 'ova' || (github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'generic-aarch64') }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.qcow2.xz
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.qcow2.xz
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.qcow2.xz
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.qcow2.xz
 
       - name: Upload VMware Virtual Machine Disk (VMDK) artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && (matrix.board.id == 'generic-aarch64' || matrix.board.id == 'ova') }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vmdk.zip
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vmdk.zip
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vmdk.zip
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vmdk.zip
 
       - name: Upload VirtualBox Virtual Disk Image (VDI) artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'ova' }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vdi.zip
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vdi.zip
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vdi.zip
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vdi.zip
 
       - name: Upload Virtual Hard Disk v2 (VHDX) artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'ova' }}
         with:
           archive: false
-          name: haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vhdx.zip
+          name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vhdx.zip
           path: |
-            output/images/haos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vhdx.zip
+            output/images/mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vhdx.zip
 
   test:
     name: Test OS image
@@ -453,7 +453,7 @@ jobs:
     name: Update artifacts index
     if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
     needs: [ build, prepare ]
-    uses: home-assistant/operating-system/.github/workflows/artifacts-index.yaml@dev
+    uses: muthur-command/operating-system/.github/workflows/artifacts-index.yaml@mc
     with:
       version: ${{ needs.prepare.outputs.version_full }}
     secrets:
@@ -466,7 +466,7 @@ jobs:
 
   bump_version:
     name: Bump ${{ needs.prepare.outputs.channel }} channel version
-    if: ${{ github.repository == 'home-assistant/operating-system' && needs.prepare.outputs.publish_build == 'true' && (needs.prepare.outputs.channel != 'dev' || github.ref == 'refs/heads/dev') }}
+    if: ${{ github.repository == 'muthur-command/operating-system' && needs.prepare.outputs.publish_build == 'true' && (needs.prepare.outputs.channel != 'dev' || github.ref == 'refs/heads/mc') }}
     environment: ${{ needs.prepare.outputs.channel }}
     needs: [ build, prepare ]
     runs-on: ubuntu-22.04
@@ -478,14 +478,14 @@ jobs:
         persist-credentials: false
 
     - name: Initialize git
-      uses: home-assistant/actions/helpers/git-init@master
+      uses: muthur-command/actions/helpers/git-init@master
       with:
         name: ${{ secrets.GIT_NAME }}
         email: ${{ secrets.GIT_EMAIL }}
         token: ${{ secrets.GIT_TOKEN }}
 
     - name: Bump Home Assistant OS ${{ needs.prepare.outputs.channel }} channel version
-      uses: home-assistant/actions/helpers/version-push@master
+      uses: muthur-command/actions/helpers/version-push@master
       with:
         key: "hassos[]"
         key-description: "Home Assistant OS"
@@ -494,7 +494,7 @@ jobs:
 
     - name: Bump Home Assistant OS beta channel version on stable release
       if: ${{ needs.prepare.outputs.channel == 'stable' }}
-      uses: home-assistant/actions/helpers/version-push@master
+      uses: muthur-command/actions/helpers/version-push@master
       with:
         key: "hassos[]"
         key-description: "Home Assistant OS"

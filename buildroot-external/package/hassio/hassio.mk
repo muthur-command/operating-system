@@ -9,7 +9,7 @@ HASSIO_LICENSE = Apache License 2.0
 # HASSIO_LICENSE_FILES = $(BR2_EXTERNAL_HASSOS_PATH)/../LICENSE
 HASSIO_SITE = $(BR2_EXTERNAL_HASSOS_PATH)/package/hassio
 HASSIO_SITE_METHOD = local
-HASSIO_VERSION_URL = "https://version.home-assistant.io/"
+HASSIO_VERSION_URL = "https://version.muthur-command.com/"
 ifeq ($(BR2_PACKAGE_HASSIO_CHANNEL_STABLE),y)
 HASSIO_VERSION_CHANNEL = "stable"
 else ifeq ($(BR2_PACKAGE_HASSIO_CHANNEL_BETA),y)
@@ -18,17 +18,21 @@ else ifeq ($(BR2_PACKAGE_HASSIO_CHANNEL_DEV),y)
 HASSIO_VERSION_CHANNEL = "dev"
 endif
 
-HASSIO_CONTAINER_IMAGES_ARCH = supervisor dns audio cli multicast observer core
+HASSIO_CONTAINER_IMAGES_ARCH = supervisor dns audio cli multicast observer mc_bd
+HASSIO_CONTAINER_IMAGES_NOARCH = mc_fd postgresql redis
 
 define HASSIO_CONFIGURE_CMDS
-	# Deploy only landing page for "core" by setting version to "landingpage"
-	curl -s $(HASSIO_VERSION_URL)$(HASSIO_VERSION_CHANNEL)".json" | jq '.core = "landingpage"' > $(@D)/version.json
+	curl -s $(HASSIO_VERSION_URL)$(HASSIO_VERSION_CHANNEL)".json" > $(@D)/version.json
 endef
 
 define HASSIO_BUILD_CMDS
 	$(Q)mkdir -p $(@D)/images
 	$(Q)mkdir -p $(HASSIO_DL_DIR)
 	$(foreach image,$(HASSIO_CONTAINER_IMAGES_ARCH),\
+		$(BR2_EXTERNAL_HASSOS_PATH)/package/hassio/fetch-container-image.sh \
+			$(BR2_PACKAGE_HASSIO_ARCH) $(BR2_PACKAGE_HASSIO_MACHINE) $(@D)/version.json $(image) "$(HASSIO_DL_DIR)" "$(@D)/images"
+	)
+	$(foreach image,$(HASSIO_CONTAINER_IMAGES_NOARCH),\
 		$(BR2_EXTERNAL_HASSOS_PATH)/package/hassio/fetch-container-image.sh \
 			$(BR2_PACKAGE_HASSIO_ARCH) $(BR2_PACKAGE_HASSIO_MACHINE) $(@D)/version.json $(image) "$(HASSIO_DL_DIR)" "$(@D)/images"
 	)

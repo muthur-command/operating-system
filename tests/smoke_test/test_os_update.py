@@ -51,7 +51,8 @@ def test_os_update(shell, shell_json, target):
     shell.run_check("ha su reload --no-progress")
 
     # update OS to latest stable - in tests it should never be the same version
-    stable_version = shell_json("curl -sSL https://version.home-assistant.io/stable.json")["hassos"]["ova"]
+    version_json = shell_json("curl -sSL https://version.muthur-command.com/stable.json")
+    stable_version = (version_json.get("mcos") or version_json.get("hassos"))["ova"]
 
     # Core (and maybe Supervisor) might be downloaded at this point, so we need to keep trying
     while True:

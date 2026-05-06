@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version of HAOS to build index for
+        description: Version of MCOS to build index for
         required: true
         type: string
 
@@ -13,7 +13,7 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Version of HAOS to build index for
+        description: Version of MCOS to build index for
         required: true
         type: string
     secrets:
@@ -35,7 +35,7 @@ env:
 
 jobs:
   build-index:
-    name: Build Home Assistant OS artifacts index
+    name: Build MCOS artifacts index
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout source
@@ -84,11 +84,11 @@ jobs:
       - name: Flush CloudFlare cache
         run: |
           # Create purge list of all artifacts
-          jq -r '. | map("https://os-artifacts.home-assistant.io/${{ inputs.version }}/" + .) | join("\n")' < "${{ inputs.version }}.json" > purge_list
+          jq -r '. | map("https://os-artifacts.muthur-command.io/${{ inputs.version }}/" + .) | join("\n")' < "${{ inputs.version }}.json" > purge_list
           # Add indexes to purge list too
-          echo "https://os-artifacts.home-assistant.io/indexes/${{ inputs.version }}.json" >> purge_list
-          echo "https://os-artifacts.home-assistant.io/index.html" >> purge_list
-          echo "https://os-artifacts.home-assistant.io/index.json" >> purge_list
+          echo "https://os-artifacts.muthur-command.io/indexes/${{ inputs.version }}.json" >> purge_list
+          echo "https://os-artifacts.muthur-command.io/index.html" >> purge_list
+          echo "https://os-artifacts.muthur-command.io/index.json" >> purge_list
           # Split to chunks of 30 files (limit of CF API)
           split -d -l30 purge_list purge_list_chunked
           # Convert chunked lists to JSON arrays and call CF purge API

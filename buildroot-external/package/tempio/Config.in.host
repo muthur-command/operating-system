@@ -1,5 +1,5 @@
 config BR2_PACKAGE_HOST_TEMPIO
-	bool "Home Assistant tempio"
+	bool "Muthur Command OS tempio (host)"
 	depends on BR2_PACKAGE_HOST_GO_HOST_ARCH_SUPPORTS
 	help
-	  Install Home Assistant template helper.
+	  Install the Muthur Command OS tempio template helper (Go text/template + sprig).

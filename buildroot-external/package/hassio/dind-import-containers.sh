@@ -18,6 +18,9 @@ for image in $(ls -S /build/images/*.tar); do
 done
 
 # Tag the Supervisor how the OS expects it to be tagged
-supervisor=$(docker images --filter "label=io.hass.type=supervisor" --quiet)
-arch=$(docker inspect --format '{{ index .Config.Labels "io.hass.arch" }}' "${supervisor}")
-docker tag "${supervisor}" "ghcr.io/home-assistant/${arch}-hassio-supervisor:latest"
+supervisor=$(docker images --filter "label=io.mcio.type=supervisor" --quiet)
+arch=$(docker inspect --format '{{ index .Config.Labels "io.mcio.arch" }}' "${supervisor}")
+if [ -z "$arch" ]; then
+	arch=$(docker inspect --format '{{ index .Config.Labels "io.hass.arch" }}' "${supervisor}")
+fi
+docker tag "${supervisor}" "ghcr.io/muthur-command/${arch}-mcio-supervisor:latest"

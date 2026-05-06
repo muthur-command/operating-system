@@ -8,7 +8,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _check_connectivity(shell, *, connected):
-    for target in ["home-assistant.io", "1.1.1.1"]:
+    for target in ["muthur-command.com", "1.1.1.1"]:
         try:
             output = shell.run_check(f"ping {target}")
             if f"{target} is alive!" in output:

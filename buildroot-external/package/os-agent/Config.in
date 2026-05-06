@@ -1,7 +1,7 @@
 config BR2_PACKAGE_OS_AGENT
-	bool "Home Assistant OS Agent"
+	bool "Muthur Command OS Agent"
 	help
-	  Install the Home Assistant OS Agent
+	  Install the Muthur Command OS Agent (D-Bus host agent for Supervisor)
 
 if BR2_PACKAGE_OS_AGENT
 

@@ -1,14 +1,14 @@
 ################################################################################
 #
-# Home Assistant tempio
+# Muthur Command OS — tempio (host tool)
 #
 ################################################################################
 
-TEMPIO_VERSION = 2021.09.0
-TEMPIO_SITE = $(call github,home-assistant,tempio,$(TEMPIO_VERSION))
+TEMPIO_VERSION = mc_2026.04.1
+TEMPIO_SITE = $(call github,muthur-command,tempio,$(TEMPIO_VERSION))
 TEMPIO_LICENSE = Apache License 2.0
 TEMPIO_LICENSE_FILES = LICENSE
-TEMPIO_GOMOD = github.com/home-assistant/tempio
+TEMPIO_GOMOD = github.com/muthur-command/tempio
 TEMPIO_LDFLAGS = -X main.version=$(TEMPIO_VERSION)
 
 define TEMPIO_GO_VENDORING

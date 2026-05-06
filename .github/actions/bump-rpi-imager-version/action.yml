@@ -1,9 +1,9 @@
 name: 'Bump RPi Imager OS version'
-description: 'Bump version of Home Assistant OS in RPi Imager'
+description: 'Bump version of Muthur Command OS in RPi Imager'
 inputs:
   version:
     required: true
-    description: "Version of Home Assistant OS to bump to."
+    description: "Version of Muthur Command OS to bump to."
   release-date:
     required: true
     description: "Release date as ISO 8601 date string."
@@ -23,7 +23,7 @@ runs:
         fi
 
     - shell: bash
-      run: git clone --depth 1 https://github.com/home-assistant/version.git /tmp/version
+      run: git clone --depth 1 https://github.com/muthur-command/version.git /tmp/version
 
     - shell: bash
       env:
@@ -35,7 +35,7 @@ runs:
           release_date=$3
           image_id=$4
           image_name=$5
-          url="https://github.com/home-assistant/operating-system/releases/download/${version}/haos_${image_id}-${version}.img.xz"
+          url="https://github.com/muthur-command/operating-system/releases/download/${version}/mcos_${image_id}-${version}.img.xz"
           temp_image=$(mktemp --suffix=.img.xz)
           temp_out=$(mktemp)
 
@@ -47,15 +47,15 @@ runs:
           extract_size=$(stat --printf="%s" "$temp_unpacked")
           extract_sha256=$(sha256sum "$temp_unpacked" | awk '{print $1}')
 
-          entry_name="Home Assistant OS ${version} (${image_name})"
+          entry_name="Muthur Command OS ${version} (${image_name})"
 
             jq '
               . as $data
               | $data
               | .os_list = [
                   .os_list[]
-                  | if .name | test("Home Assistant OS .* \\(" + $image_name + "\\)") then
-                    .name = "Home Assistant OS " + $version + " (" + $image_name + ")"
+                  | if .name | test("Muthur Command OS .* \\(" + $image_name + "\\)") then
+                    .name = "Muthur Command OS " + $version + " (" + $image_name + ")"
                     | .url = $url
                     | .extract_size = ($extract_size | tonumber)
                     | .extract_sha256 = $extract_sha256
@@ -90,7 +90,7 @@ runs:
         INPUTS_VERSION: ${{ inputs.version }}
       run: |
         cd /tmp/version
-        git commit -am "Bump Home Assistant OS to ${INPUTS_VERSION} for RPi Imager"
+        git commit -am "Bump Muthur Command OS to ${INPUTS_VERSION} for RPi Imager"
         git push
 
     - shell: bash
