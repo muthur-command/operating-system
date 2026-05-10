@@ -1,0 +1,10 @@
+[Unit]
+Description=MCOS Configuration Manager
+After=mcos-bind.target network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/mcos-config
+
+[Install]
+WantedBy=multi-user.target

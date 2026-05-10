@@ -21,11 +21,11 @@ index 32ada582e50d..1db56db1e95f 100644
 --- a/arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5-ha-yellow.dts
 +++ b/arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5-ha-yellow.dts
 @@ -47,6 +47,9 @@ &hdmi1 {
- // HA Yellow Board-specific stuff
+ // MCOS Yellow board-specific
  
  / {
 +	compatible = "raspberrypi,5-compute-module-ha-yellow", "raspberrypi,5-compute-module", "brcm,bcm2712";
-+	model = "Raspberry Pi Compute Module 5 on Home Assistant Yellow";
++	model = "Raspberry Pi Compute Module 5 on Yellow (MCOS)";
 +
  	chosen: chosen {
  		bootargs = "coherent_pool=1M 8250.nr_uarts=1 snd_bcm2835.enable_headphones=0";

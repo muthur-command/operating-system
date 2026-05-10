@@ -14,7 +14,7 @@ APPARMOR_URL="https://version.muthur-command.com/apparmor_${channel}.txt"
 # Make image
 rm -f "${data_img}"
 truncate --size="1280M" "${data_img}"
-mkfs.ext4 -L "hassos-data" -E lazy_itable_init=0,lazy_journal_init=0 "${data_img}"
+mkfs.ext4 -L "mcos-data" -E lazy_itable_init=0,lazy_journal_init=0 "${data_img}"
 
 # Mount / init file structs
 mkdir -p "${data_dir}"
@@ -37,7 +37,7 @@ touch "${data_dir}/.docker-use-containerd-snapshotter"
 
 # Setup AppArmor
 mkdir -p "${data_dir}/supervisor/apparmor"
-curl -fsL -o "${data_dir}/supervisor/apparmor/hassio-supervisor" "${APPARMOR_URL}"
+curl -fsL -o "${data_dir}/supervisor/apparmor/mcio-supervisor" "${APPARMOR_URL}"
 
 # Persist build-time updater channel
 jq -n --arg channel "${channel}" '{"channel": \$channel}' > "${data_dir}/supervisor/updater.json"

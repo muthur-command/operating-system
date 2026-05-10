@@ -7,7 +7,7 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-There is no sudo on HAOS, remove it from messages that could be shown to
+There is no sudo on MCOS, remove it from messages that could be shown to
 users. Also remove raspi-config mention, we will only carry the default
 release.
 

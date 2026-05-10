@@ -11,7 +11,7 @@ Without this patch, kernel traces are generated when e.g. Frigate uses the drive
 
 WARNING: CPU: 3 PID: 5063 at include/linux/rwsem.h:80 find_vma+0x6c/0x80
 Modules linked in: broadcom bcm_phy_ptp wireguard libchacha20poly1305 chacha_neon poly1305_neon ip6_udp_tunnel udp_tunnel libcurve25519_generic libchacha rfcomm nf_conntrack_netlink xt_set ip_set nft_chain_nat nft_compat nf_tables xfrm_user algif_hash algif_skcipher af_alg bnep btsdio sch_fq_codel brcmfmac_wcc vc4 snd_soc_hdmi_codec drm_display_helper brcmfmac cec hci_uart btqca btrtl btbcm btintel spidev drm_dma_helper brcmutil bluetooth snd_soc_core snd_compress snd_pcm_dmaengine v3d ecdh_generic rpi_hevc_dec snd_pcm pisp_be cfg80211 aes_ce_blk aes_ce_cipher v4l2_mem2mem ghash_ce videobuf2_dma_contig videobuf2_memops snd_timer ecc gpu_sched videobuf2_v4l2 sha2_ce sha256_arm64 sha1_ce libaes sha1_generic raspberrypi_hwmon rfkill snd videobuf2_common rp1_pio spi_bcm2835 drm_shmem_helper gpio_keys raspberrypi_gpiomem hailo_pci(O) rp1_mailbox i2c_brcmstb drm_kms_helper pwm_fan rp1_adc nvmem_rmem rp1 uio_pdrv_genirq uio fuse drm drm_panel_orientation_quirks backlight nfnetlink
-CPU: 3 UID: 0 PID: 5063 Comm: frigate.detecto Tainted: G        W  O       6.12.25-haos-raspi #1
+CPU: 3 UID: 0 PID: 5063 Comm: frigate.detecto Tainted: G        W  O       6.12.25-mcos-raspi #1
 Tainted: [W]=WARN, [O]=OOT_MODULE
 Hardware name: Raspberry Pi 5 Model B Rev 1.1 (DT)
 pstate: 80400009 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)

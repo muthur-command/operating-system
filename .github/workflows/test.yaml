@@ -63,7 +63,7 @@ jobs:
 
       - name: Extract OS image
         run: |
-          xz -dc mcos*.qcow2.xz > tests/haos.qcow2
+          xz -dc mcos*.qcow2.xz > tests/mcos.qcow2
           rm mcos*.qcow2.xz
 
       - name: Enable KVM group perms

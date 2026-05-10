@@ -12,7 +12,7 @@ DRAM banks in total. Increase the config value to 8 to initialize the
 whole RAM. Without this change, kernel only sees 8 GiB of RAM on the 16
 GiB CM5 as reported in [1].
 
-[1] https://github.com/home-assistant/operating-system/issues/3989
+[1] https://github.com/muthur-command/operating-system/issues/3989
 
 Signed-off-by: Jan Čermák <sairon@sairon.cz>
 Upstream: https://patchwork.ozlabs.org/project/uboot/patch/20250430171555.144243-1-sairon@sairon.cz/

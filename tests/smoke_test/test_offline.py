@@ -44,7 +44,7 @@ def test_ha_runs_offline(shell):
                 break
         sleep(1)
 
-    # To simulate situation where HAOS is not connected to internet, we need to add
+    # To simulate situation where MCOS is not connected to internet, we need to add
     # default gateway to the supervisor connection. So we add a default route to
     # a non-existing IP address in the VM's subnet. Maybe there is a better way?
     shell.run_check('nmcli con modify "Supervisor enp0s3" ipv4.addresses "192.168.76.10/24" '
@@ -54,12 +54,12 @@ def test_ha_runs_offline(shell):
     _check_connectivity(shell, connected=False)
 
     for _ in range(60):
-        if check_container_running("homeassistant") and check_container_running("hassio_cli"):
+        if check_container_running("muthurcommand") and check_container_running("hassio_cli"):
             break
         sleep(1)
     else:
         shell.run_check("docker logs hassio_supervisor")
-        raise AssertionError("homeassistant or hassio_cli not running after 60s")
+        raise AssertionError("muthurcommand or hassio_cli not running after 60s")
 
     web_index = shell.run_check("curl http://localhost:8123")
     assert "</html>" in " ".join(web_index)

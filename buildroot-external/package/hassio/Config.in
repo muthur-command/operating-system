@@ -16,7 +16,7 @@ config BR2_PACKAGE_HASSIO_ARCH
 config BR2_PACKAGE_HASSIO_MACHINE
 	string "Supervisor Machine"
 	help
-	  Machine to pull containers for (used for landing page).
+	  Machine id used when resolving images from version.json.
 
 choice
 	prompt "Default Channel"

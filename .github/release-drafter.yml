@@ -1,14 +1,14 @@
-name-template: Home Assistant OS $RESOLVED_VERSION
+name-template: Muthur Command OS $RESOLVED_VERSION
 tag-template: $RESOLVED_VERSION
 version-template: "$MAJOR.$MINOR"
 categories:
-  - title: 'Home Assistant Operating System'
+  - title: 'Muthur Command Operating System'
     label: 'os'
   - title: 'Raspberry Pi'
     label: 'board/raspberrypi'
-  - title: 'Home Assistant Yellow'
+  - title: 'Yellow'
     label: 'board/yellow'
-  - title: 'Home Assistant Green'
+  - title: 'Green'
     label: 'board/green'
   - title: 'Open Virtual Appliance'
     label: 'board/ova'

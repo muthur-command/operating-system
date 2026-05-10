@@ -18,7 +18,7 @@ avoided by the sd_journal_wait().
 To fix the issue, when no matching journal events are available, set a
 flag and reuse the backoff mechanism using the sd_journal_wait().
 
-Link: https://github.com/home-assistant/operating-system/issues/4190
+Link: https://github.com/muthur-command/operating-system/issues/4190
 ---
 (Backported for v256.x)
 Signed-off-by: Jan Čermák <sairon@sairon.cz>

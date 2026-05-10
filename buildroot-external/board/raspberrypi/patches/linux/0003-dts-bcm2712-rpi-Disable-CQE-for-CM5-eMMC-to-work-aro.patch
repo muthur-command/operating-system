@@ -7,7 +7,7 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-With CQE enabled, HAOS first boot often fails during swap file initilization,
+With CQE enabled, MCOS first boot often fails during swap file initilization,
 and leaves hanging on all I/O access. For some reason, this only happens when
 an ext4lazyinit on the accessed partition hasn't been finished yet. Before the
 real solution is found, disable CQE at the cost of a small performance cost.

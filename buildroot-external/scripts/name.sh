@@ -1,18 +1,18 @@
 #!/bin/bash
 
-function hassos_image_name() {
-    echo "${BINARIES_DIR}/${HASSOS_ID}_${BOARD_ID}-$(hassos_version).${1}"
+function mcos_image_name() {
+    echo "${BINARIES_DIR}/${MCOS_ID}_${BOARD_ID}-$(mcos_version).${1}"
 }
 
-function hassos_image_basename() {
-    echo "${BINARIES_DIR}/${HASSOS_ID}_${BOARD_ID}-$(hassos_version)"
+function mcos_image_basename() {
+    echo "${BINARIES_DIR}/${MCOS_ID}_${BOARD_ID}-$(mcos_version)"
 }
 
-function hassos_rauc_compatible() {
-    echo "${HASSOS_ID}-${BOARD_ID}"
+function mcos_rauc_compatible() {
+    echo "${MCOS_ID}-${BOARD_ID}"
 }
 
-function hassos_version() {
+function mcos_version() {
     if [ -z "${VERSION_SUFFIX}" ]; then
         echo "${VERSION_MAJOR}.${VERSION_MINOR}"
     else

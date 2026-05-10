@@ -1,0 +1,15 @@
+[Unit]
+Description=MCOS overlay setup 
+DefaultDependencies=no
+RefuseManualStart=true
+RefuseManualStop=true
+Before=mcos-bind.target
+After=mnt-overlay.mount
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/mcos-overlay
+RemainAfterExit=true
+
+[Install]
+WantedBy=local-fs.target

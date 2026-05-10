@@ -1,7 +1,7 @@
 From a42b2ff69a6fcecfbcf0a0f469ddbfe01ad48570 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20=C4=8Cerm=C3=A1k?= <sairon@sairon.cz>
 Date: Thu, 3 Oct 2024 13:40:53 +0200
-Subject: [PATCH] ARM: dts: bcm2712: Add device tree for CM5 on HA Yellow
+Subject: [PATCH] ARM: dts: bcm2712: Add device tree for CM5 on Muthur Command Yellow
 
 ---
  arch/arm64/boot/dts/broadcom/Makefile         |    1 +
@@ -80,7 +80,7 @@ index 0000000000000..4b130f42b2358
 +
 +/ {
 +	compatible = "raspberrypi,5-compute-module-ha-yellow", "raspberrypi,5-compute-module", "brcm,bcm2712";
-+	model = "Raspberry Pi Compute Module 5 on Home Assistant Yellow";
++	model = "Raspberry Pi Compute Module 5 on Yellow (MCOS)";
 +
 +	/* Will be filled by the bootloader */
 +	memory@0 {
@@ -825,7 +825,7 @@ index 0000000000000..4b130f42b2358
 +};
 +
 +// =============================================
-+// HA Yellow Board-specific stuff
++// MCOS Yellow board-specific
 +
 +/ {
 +	chosen: chosen {

@@ -16,22 +16,14 @@ on:
         description: Version of MCOS to build index for
         required: true
         type: string
-    secrets:
-      R2_OS_ARTIFACTS_ID:
-        required: true
-      R2_OS_ARTIFACTS_KEY:
-        required: true
-      R2_OS_ARTIFACTS_BUCKET:
-        required: true
-      R2_OS_ARTIFACTS_ENDPOINT:
-        required: true
-      CF_ZONE:
-        required: true
-      CF_PURGE_TOKEN:
-        required: true
 
+# S3-compatible storage for OS artifacts (same pattern as version/.github/workflows/version.yml).
 env:
   PYTHON_VERSION: "3.13"
+  MCOS_ARTIFACTS_S3_BUCKET: os-artifacts-muthur-command
+  MCOS_ARTIFACTS_S3_PUBLIC_BASE: http://s3.muthur-command.com
+  MCOS_ARTIFACTS_CDN_BASE: http://os-artifacts.muthur-command.com
+  MCOS_S3_NO_VERIFY_SSL: ${{ vars.MCOS_S3_NO_VERIFY_SSL }}
 
 jobs:
   build-index:
@@ -49,54 +41,79 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install AWS CLI
-        run: pip install 'awscli<1.37.0'
+        run: pip install awscli
 
       - name: Create build index
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_OS_ARTIFACTS_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_OS_ARTIFACTS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
         run: |
-          aws s3api list-objects-v2 \
-            --bucket "${{ secrets.R2_OS_ARTIFACTS_BUCKET }}" \
-            --endpoint-url "${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}" \
-            --prefix "${{ inputs.version }}/" \
-            --query 'Contents[].Key' | jq 'map(split("/")[1]) | sort' > "${{ inputs.version }}.json"
-          aws s3 cp \
-            "${{ inputs.version }}.json" \
-            s3://${{ secrets.R2_OS_ARTIFACTS_BUCKET }}/indexes/ \
-            --endpoint-url "${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}"
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Missing AWS credentials. Set Actions secrets AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (S3-compatible keys for MCOS_ARTIFACTS_S3_BUCKET / MCOS_ARTIFACTS_S3_PUBLIC_BASE). See version repo workflow."
+            exit 1
+          fi
+          AWS_SSL=()
+          if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
+            echo "::warning::MCOS_S3_NO_VERIFY_SSL=true — skipping TLS verify (not for production)."
+            AWS_SSL=(--no-verify-ssl)
+          fi
+          VERSION="${{ inputs.version }}"
+          aws "${AWS_SSL[@]}" s3api list-objects-v2 \
+            --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+            --prefix "${VERSION}/" \
+            --query 'Contents[].Key' | jq 'map(split("/")[1]) | sort' > "${VERSION}.json"
+          aws "${AWS_SSL[@]}" s3 cp \
+            "${VERSION}.json" \
+            "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/indexes/" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
 
       - name: Regenerate artifacts index
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_OS_ARTIFACTS_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_OS_ARTIFACTS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
         run: |
-          aws s3api list-objects-v2 \
-            --bucket "${{ secrets.R2_OS_ARTIFACTS_BUCKET }}" \
-            --endpoint-url "${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}" \
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Missing AWS credentials."
+            exit 1
+          fi
+          AWS_SSL=()
+          if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
+            AWS_SSL=(--no-verify-ssl)
+          fi
+          aws "${AWS_SSL[@]}" s3api list-objects-v2 \
+            --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
             --prefix "indexes/" \
             --query 'Contents[].Key' | jq 'map(capture("indexes/(?<version>[[:digit:]].+).json").version) | sort' > .os-artifacts/index.json
-          aws s3 sync \
+          aws "${AWS_SSL[@]}" s3 sync \
             .os-artifacts/ \
-            s3://${{ secrets.R2_OS_ARTIFACTS_BUCKET }}/ \
-            --endpoint-url "${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}" \
+            "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
 
-      - name: Flush CloudFlare cache
-        run: |
-          # Create purge list of all artifacts
-          jq -r '. | map("https://os-artifacts.muthur-command.io/${{ inputs.version }}/" + .) | join("\n")' < "${{ inputs.version }}.json" > purge_list
-          # Add indexes to purge list too
-          echo "https://os-artifacts.muthur-command.io/indexes/${{ inputs.version }}.json" >> purge_list
-          echo "https://os-artifacts.muthur-command.io/index.html" >> purge_list
-          echo "https://os-artifacts.muthur-command.io/index.json" >> purge_list
-          # Split to chunks of 30 files (limit of CF API)
-          split -d -l30 purge_list purge_list_chunked
-          # Convert chunked lists to JSON arrays and call CF purge API
-          for f in purge_list_chunked*; do
-            files=$(jq -R -s 'split("\n")[:-1]' < "$f")
-            curl --silent --show-error --fail -X POST \
-              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE }}/purge_cache" \
-              -H "Authorization: Bearer ${{ secrets.CF_PURGE_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              --data "{\"files\": ${files}}"
-          done
+      # - name: Flush CloudFlare cache
+      #   env:
+      #     CF_ZONE: ${{ secrets.CF_ZONE }}
+      #     CF_PURGE_TOKEN: ${{ secrets.CF_PURGE_TOKEN }}
+      #   run: |
+      #     if [ -z "$CF_ZONE" ] || [ -z "$CF_PURGE_TOKEN" ]; then
+      #       echo "Skipping Cloudflare purge (CF_ZONE / CF_PURGE_TOKEN not set)"
+      #       exit 0
+      #     fi
+      #     VERSION="${{ inputs.version }}"
+      #     CDN_BASE="${{ env.MCOS_ARTIFACTS_CDN_BASE }}"
+      #     jq -r --arg base "$CDN_BASE" --arg v "$VERSION" '. | map($base + "/" + $v + "/" + .) | join("\n")' < "${VERSION}.json" > purge_list
+      #     echo "${CDN_BASE}/indexes/${VERSION}.json" >> purge_list
+      #     echo "${CDN_BASE}/index.html" >> purge_list
+      #     echo "${CDN_BASE}/index.json" >> purge_list
+      #     split -d -l30 purge_list purge_list_chunked
+      #     for f in purge_list_chunked*; do
+      #       files=$(jq -R -s 'split("\n")[:-1]' < "$f")
+      #       curl --silent --show-error --fail -X POST \
+      #         "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/purge_cache" \
+      #         -H "Authorization: Bearer ${CF_PURGE_TOKEN}" \
+      #         -H "Content-Type: application/json" \
+      #         --data "{\"files\": ${files}}"
+      #     done

@@ -27,7 +27,7 @@ that can not use the legacy loader, causing any unexpected failures.
 
 Also AMD GX-212JC in HP t520 seems to be affected as reported in [3].
 
-[3] https://github.com/home-assistant/operating-system/issues/3557
+[3] https://github.com/muthur-command/operating-system/issues/3557
 
 ----
 
@@ -36,7 +36,7 @@ likely target also other i5-based systems that are not affected by the
 EFI bug but it should cause no harm, as the legacy loader was used in
 pre-2.12 GRUB anyway.
 
-[4] https://github.com/home-assistant/operating-system/issues/3305#issuecomment-2360633688
+[4] https://github.com/muthur-command/operating-system/issues/3305#issuecomment-2360633688
 
 Signed-off-by: Jan Čermák <sairon@sairon.cz>
 ---

@@ -42,7 +42,7 @@ image_tag=$(jq -e -r --arg image_json_name "${image_json_name}" \
 	'.[$image_json_name]' < "${version_json}")
 full_image_name="${image_name}:${image_tag}"
 
-# Map HAOS arch to OCI platform arch for skopeo
+# Map MCOS arch to OCI platform arch for skopeo
 case "${arch}" in
 	aarch64) oci_arch="arm64" ;;
 	*) oci_arch="${arch}" ;;

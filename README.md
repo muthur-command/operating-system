@@ -1,7 +1,7 @@
 # Muthur Command Operating System
 
-Muthur Command Operating System (MCOS, forked from HAOS) is a Linux based
-operating system optimized to host Muthur Command services and managed apps.
+Muthur Command Operating System (MCOS) is a Linux based operating system
+optimized to host Muthur Command services and managed apps.
 
 MCOS uses Docker as its container engine. By default it deploys the MCIO
 Supervisor as a container. MCIO Supervisor then controls MC stack services in
@@ -28,6 +28,9 @@ metadata and migration planning documents.
 
 If you just want to use MCOS, follow your project's installation and release
 notes for the latest images and OTA channels.
+
+On the host OS, the CLI is installed as `mc` (primary), with `mcos-cli` and `ha`
+as symlinks to the same wrapper used to reach the Supervisor CLI container.
 
 ## Development
 

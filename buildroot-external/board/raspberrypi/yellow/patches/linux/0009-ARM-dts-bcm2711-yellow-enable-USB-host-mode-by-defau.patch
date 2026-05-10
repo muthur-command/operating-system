@@ -3,8 +3,8 @@ From: Stefan Agner <stefan@agner.ch>
 Date: Fri, 7 Jan 2022 17:10:00 +0100
 Subject: [PATCH] ARM: dts: bcm2711: yellow: enable USB host mode by default
 
-The DWC2 controller is disable by default. Enable it since Home
-Assistant Yellow has a USB hub and USB ports connected to it.
+The DWC2 controller is disable by default. Enable it since Muthur
+Command Yellow has a USB hub and USB ports connected to it.
 
 Signed-off-by: Stefan Agner <stefan@agner.ch>
 ---

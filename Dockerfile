@@ -1,5 +1,9 @@
 FROM debian:bullseye
 
+LABEL org.opencontainers.image.title="MCOS buildroot builder" \
+      org.opencontainers.image.description="Debian-based image used to build Muthur Command OS (Buildroot)" \
+      org.opencontainers.image.authors="Muthur Command <https://www.muthur-command.com/>"
+
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

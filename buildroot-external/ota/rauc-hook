@@ -27,7 +27,7 @@ install_boot() {
     rm -f "${BOOT_MNT}"/overlays/* || true
 
     # Update
-    if [ "$RAUC_SYSTEM_COMPATIBLE" = "haos-rpi5-64" ]; then
+    if [ "$RAUC_SYSTEM_COMPATIBLE" = "mcos-rpi5-64" ]; then
         rm -rf "${BOOT_MNT}/slot-default"
         cp -r "${BOOT_NEW}/slot-A" "${BOOT_MNT}/slot-default"
         sed -i "1 s/rootfstype=squashfs //" /mnt/boot/cmdline.txt
@@ -45,7 +45,7 @@ install_boot() {
 }
 
 install_spl() {
-    DEVICE_CHILD="$(findfs LABEL="hassos-boot")"
+    DEVICE_CHILD="$(findfs LABEL="mcos-boot")"
     DEVICE_ROOT="/dev/$(lsblk -no pkname "${DEVICE_CHILD}")"
     PART_TABLE="$(sfdisk -lqJ "${DEVICE_ROOT}")"
     PART_LABEL="$(echo "${PART_TABLE}" | jq -r '.partitiontable.label')"
@@ -89,7 +89,7 @@ post_install_kernel() {
     fi
 
     # Copy new OS to appropriate directory
-    if [ "$RAUC_SYSTEM_COMPATIBLE" = "haos-rpi5-64" ]; then
+    if [ "$RAUC_SYSTEM_COMPATIBLE" = "mcos-rpi5-64" ]; then
         rm -rf "${BOOT_MNT}/slot-${RAUC_SLOT_BOOTNAME}"
         mv "${BOOT_MNT}/slot-default" "${BOOT_MNT}/slot-${RAUC_SLOT_BOOTNAME}"
     fi

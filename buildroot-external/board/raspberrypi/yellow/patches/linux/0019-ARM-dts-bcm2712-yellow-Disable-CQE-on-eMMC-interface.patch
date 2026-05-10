@@ -9,22 +9,22 @@ Content-Transfer-Encoding: 8bit
 Testing shows that enabling CQE causes random hangs on I/O operations, often
 during the swap boostrapping on the first boot:
 
-[  242.826099]       Tainted: G         C         6.6.51-haos-raspi #54
+[  242.826099]       Tainted: G         C         6.6.51-mcos-raspi #54
 [  242.832463] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
 [  242.840429] INFO: task jbd2/mmcblk0p7-:300 blocked for more than 120 seconds.
-[  242.847572]       Tainted: G         C         6.6.51-haos-raspi #54
+[  242.847572]       Tainted: G         C         6.6.51-mcos-raspi #54
 [  242.853928] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
 [  242.861789] INFO: task jbd2/mmcblk0p8-:344 blocked for more than 120 seconds.
-[  242.868926]       Tainted: G         C         6.6.51-haos-raspi #54
+[  242.868926]       Tainted: G         C         6.6.51-mcos-raspi #54
 [  242.875277] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
 [  242.883149] INFO: task systemd-timesyn:569 blocked for more than 120 seconds.
-[  242.890282]       Tainted: G         C         6.6.51-haos-raspi #54
+[  242.890282]       Tainted: G         C         6.6.51-mcos-raspi #54
 [  242.896628] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
 [  242.904522] INFO: task dockerd:606 blocked for more than 120 seconds.
-[  242.910958]       Tainted: G         C         6.6.51-haos-raspi #54
+[  242.910958]       Tainted: G         C         6.6.51-mcos-raspi #54
 [  242.917304] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
 [  242.925200] INFO: task runc:[2:INIT]:1504 blocked for more than 120 seconds.
-[  242.932249]       Tainted: G         C         6.6.51-haos-raspi #54
+[  242.932249]       Tainted: G         C         6.6.51-mcos-raspi #54
 [  242.938595] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
 
 This is a known issue currently for some SD cards but it hasn't been

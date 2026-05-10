@@ -1,9 +1,12 @@
 ################################################################################
 #
-# Muthur Command OS Agent (fork of Home Assistant OS Agent)
+# Muthur Command OS Agent
 #
 ################################################################################
 
+# Pinned commit + golang-package (reproducible via go.sum in the os-agent repo).
+# Optional alternative: release tarball + os-agent.hash per upstream Buildroot
+# pattern—switch only if you publish versioned tarballs on GitHub Releases.
 # Pin to a full commit so GitHub archive URLs work without publishing tags.
 OS_AGENT_COMMIT = 4ead7a3bb4b47165627a7945870536544ca6b9c6
 OS_AGENT_VERSION = $(OS_AGENT_COMMIT)

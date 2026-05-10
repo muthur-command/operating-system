@@ -15,7 +15,7 @@ def test_init(shell):
     shell.run_check(
         "jq '.auto_update = false' /mnt/data/supervisor/updater.json > /tmp/updater.json"
         " && mv /tmp/updater.json /mnt/data/supervisor/updater.json"
-        " && systemctl restart hassos-supervisor.service"
+        " && systemctl restart mcos-supervisor.service"
     )
 
     def check_container_running(container_name):
@@ -26,20 +26,20 @@ def test_init(shell):
 
     # wait for important containers first
     while True:
-        if check_container_running("homeassistant") and check_container_running("hassio_supervisor"):
+        if check_container_running("muthurcommand") and check_container_running("hassio_supervisor"):
             break
 
         sleep(1)
 
     # wait for system ready
     while True:
-        output = "\n".join(shell.run_check("ha os info || true"))
+        output = "\n".join(shell.run_check("mc os info || true"))
         if "System is not ready" not in output and "connection refused" not in output:
             break
 
         sleep(1)
 
-    output = shell.run_check("ha os info")
+    output = shell.run_check("mc os info")
     _LOGGER.info("%s", "\n".join(output))
 
 
@@ -49,7 +49,7 @@ def test_rauc_status(shell, shell_json):
     assert "RAUC_BOOT_PRIMARY='kernel.0'" in rauc_status
     assert "rauc-WARNING" not in "\n".join(rauc_status)
 
-    os_info = shell_json("ha os info --no-progress --raw-json")
+    os_info = shell_json("mc os info --no-progress --raw-json")
     expected_version = os_info.get("data", {}).get("version")
     assert expected_version is not None and expected_version != ""
 
@@ -69,7 +69,7 @@ def test_dmesg(shell):
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_supervisor_logs(shell):
-    output = shell.run_check("ha su logs")
+    output = shell.run_check("mc su logs")
     _LOGGER.info("%s", "\n".join(output))
 
 
@@ -123,7 +123,7 @@ def test_custom_swap_size(shell, target):
     output = shell.run_check("stat -c '%s' /mnt/data/swapfile")
     # set new swap size to half of the previous size - round to 4k blocks
     new_swap_size = (int(output[0]) // 2 // 4096) * 4096
-    shell.console.sendline(f"echo 'SWAPSIZE={new_swap_size/1024/1024}M' > /etc/default/haos-swapfile; reboot")
+    shell.console.sendline(f"echo 'SWAPSIZE={new_swap_size/1024/1024}M' > /etc/default/mcos-swapfile; reboot")
     shell.console.expect("Booting `Slot ", timeout=60)
     # reactivate ShellDriver to handle login again
     target.deactivate(shell)
@@ -134,7 +134,7 @@ def test_custom_swap_size(shell, target):
 
 @pytest.mark.dependency(depends=["test_custom_swap_size"])
 def test_no_swap(shell, target):
-    shell.console.sendline("echo 'SWAPSIZE=0' > /etc/default/haos-swapfile; reboot")
+    shell.console.sendline("echo 'SWAPSIZE=0' > /etc/default/mcos-swapfile; reboot")
     shell.console.expect("Booting `Slot ", timeout=60)
     # reactivate ShellDriver to handle login again
     target.deactivate(shell)

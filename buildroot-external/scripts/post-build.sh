@@ -2,10 +2,10 @@
 # shellcheck disable=SC1090,SC1091
 set -e
 
-SCRIPT_DIR=${BR2_EXTERNAL_HASSOS_PATH}/scripts
+SCRIPT_DIR=${BR2_EXTERNAL_MCOS_PATH}/scripts
 BOARD_DIR=${2}
 
-. "${BR2_EXTERNAL_HASSOS_PATH}/meta"
+. "${BR2_EXTERNAL_MCOS_PATH}/meta"
 . "${BOARD_DIR}/meta"
 
 . "${SCRIPT_DIR}/rootfs-layer.sh"
@@ -13,7 +13,7 @@ BOARD_DIR=${2}
 . "${SCRIPT_DIR}/rauc.sh"
 
 
-# HassOS tasks
+# MCOS rootfs post-build tasks
 fix_rootfs
 install_tini_docker
 setup_localtime
@@ -22,14 +22,14 @@ setup_vconsole
 # Write os-release
 # shellcheck disable=SC2153
 (
-    echo "NAME=\"${HASSOS_NAME}\""
-    echo "VERSION=\"$(hassos_version) (${BOARD_NAME})\""
-    echo "ID=${HASSOS_ID}"
-    echo "VERSION_ID=$(hassos_version)"
-    echo "PRETTY_NAME=\"${HASSOS_NAME} $(hassos_version)\""
-    echo "CPE_NAME=cpe:2.3:o:muthur-command:${HASSOS_ID}:$(hassos_version):*:${DEPLOYMENT}:*:*:*:${BOARD_ID}:*"
+    echo "NAME=\"${MCOS_NAME}\""
+    echo "VERSION=\"$(mcos_version) (${BOARD_NAME})\""
+    echo "ID=${MCOS_ID}"
+    echo "VERSION_ID=$(mcos_version)"
+    echo "PRETTY_NAME=\"${MCOS_NAME} $(mcos_version)\""
+    echo "CPE_NAME=cpe:2.3:o:muthur-command:${MCOS_ID}:$(mcos_version):*:${DEPLOYMENT}:*:*:*:${BOARD_ID}:*"
     echo "HOME_URL=https://www.muthur-command.com/"
-    echo "VARIANT=\"${HASSOS_NAME} ${BOARD_NAME}\""
+    echo "VARIANT=\"${MCOS_NAME} ${BOARD_NAME}\""
     echo "VARIANT_ID=${BOARD_ID}"
     echo "SUPERVISOR_MACHINE=${SUPERVISOR_MACHINE}"
     echo "SUPERVISOR_ARCH=${SUPERVISOR_ARCH}"

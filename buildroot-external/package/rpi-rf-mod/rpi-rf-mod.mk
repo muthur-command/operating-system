@@ -34,7 +34,7 @@ else ifeq ($(BR2_PACKAGE_RPI_RF_MOD_DTS_ODROID_C2),y)
   # ODROID-C2 DTS file
   RPI_RF_MOD_DTS_FILE = rpi-rf-mod-odroid-c2
 else ifeq ($(BR2_PACKAGE_RPI_RF_MOD_DTS_YELLOW),y)
-  # HomeAssistant Yellow DTS file
+  # Muthur Command Yellow DTS file
   RPI_RF_MOD_DTS_FILE = rpi-rf-mod-yellow
 endif
 

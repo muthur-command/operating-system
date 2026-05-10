@@ -1,4 +1,4 @@
-# Home Assistant Operating System build workflow
+# Muthur Command OS (MCOS) build workflow
 
 name: OS build
 
@@ -12,7 +12,7 @@ on:
         required: false
         type: string
       publish:
-        description: 'Publish build artifacts to R2 (not applicable to forks)'
+        description: 'Publish build artifacts to S3 (not applicable to forks)'
         required: true
         type: boolean
         default: true
@@ -34,6 +34,9 @@ on:
 
 env:
   PYTHON_VERSION: "3.13"
+  MCOS_ARTIFACTS_S3_BUCKET: os-artifacts-muthur-command
+  MCOS_ARTIFACTS_S3_PUBLIC_BASE: http://s3.muthur-command.com
+  MCOS_S3_NO_VERIFY_SSL: ${{ vars.MCOS_S3_NO_VERIFY_SSL }}
 
 jobs:
   prepare:
@@ -50,7 +53,7 @@ jobs:
       channel: ${{ steps.channel.outputs.channel }}
       hassio_channel_option: ${{ steps.channel.outputs.hassio_channel_option }}
       matrix: ${{ steps.generate_matrix.outputs.result }}
-      build_container_image: ghcr.io/${{ github.repository_owner }}/haos-builder@${{ steps.build_haos_builder.outputs.digest }}
+      build_container_image: ghcr.io/${{ github.repository_owner }}/mcos-builder@${{ steps.build_mcos_builder.outputs.digest }}
       publish_build: ${{ steps.check_publish.outputs.publish_build }}
       self_signed_cert: ${{ steps.generate_signing_key.outputs.self_signed_cert }}
     steps:
@@ -186,13 +189,13 @@ jobs:
             password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
-        id: build_haos_builder
+        id: build_mcos_builder
         with:
           context: .
           file: Dockerfile
-          tags: ghcr.io/${{ github.repository_owner }}/haos-builder
-          cache-from: ghcr.io/${{ github.repository_owner }}/haos-builder:cache-${{ steps.version.outputs.version_main }}
-          cache-to: ghcr.io/${{ github.repository_owner }}/haos-builder:cache-${{ steps.version.outputs.version_main }}
+          tags: ghcr.io/${{ github.repository_owner }}/mcos-builder
+          cache-from: ghcr.io/${{ github.repository_owner }}/mcos-builder:cache-${{ steps.version.outputs.version_main }}
+          cache-to: ghcr.io/${{ github.repository_owner }}/mcos-builder:cache-${{ steps.version.outputs.version_main }}
           push: true
 
       - name: Generate self-signed certificate
@@ -284,30 +287,30 @@ jobs:
         uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: /mnt/cache/cc
-          key: haos-cc-${{ matrix.board.id }}
+          key: mcos-cc-${{ matrix.board.id }}
 
       - name: Generate build config
-        uses: "./.github/actions/haos-builder-command"
+        uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: make ${{ matrix.board.defconfig }}_defconfig
 
       - name: Override release channel
         if: ${{ needs.prepare.outputs.hassio_channel_option != 'BR2_PACKAGE_HASSIO_CHANNEL_STABLE' }}
-        uses: "./.github/actions/haos-builder-command"
+        uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: |
             bash -c 'echo "${{ needs.prepare.outputs.hassio_channel_option }}=y" >> /build/output/.config && make olddefconfig'
 
       - name: Build
-        uses: "./.github/actions/haos-builder-command"
+        uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: make
 
       - name: Check Linux config
-        uses: "./.github/actions/haos-builder-command"
+        uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: |
@@ -317,15 +320,25 @@ jobs:
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
         working-directory: output/images/
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_OS_ARTIFACTS_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_OS_ARTIFACTS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
         run: |
-          aws s3 sync \
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for S3 upload."
+            exit 1
+          fi
+          AWS_SSL=()
+          if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
+            echo "::warning::MCOS_S3_NO_VERIFY_SSL=true — skipping TLS verify (not for production)."
+            AWS_SSL=(--no-verify-ssl)
+          fi
+          aws "${AWS_SSL[@]}" s3 sync \
             ./ \
-            s3://${{ secrets.R2_OS_ARTIFACTS_BUCKET }}/${{ needs.prepare.outputs.version_full }}/ \
+            "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${{ needs.prepare.outputs.version_full }}/" \
             --exclude "*" \
             --include "mcos_*" \
-            --endpoint-url ${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
 
       - name: Upload release assets
         if: ${{ github.event_name == 'release' }}
@@ -347,7 +360,7 @@ jobs:
         uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: /mnt/cache/cc
-          key: haos-cc-${{ matrix.board.id }}-${{ github.run_id }}
+          key: mcos-cc-${{ matrix.board.id }}-${{ github.run_id }}
 
       - name: Generate build summary
         run: |
@@ -357,9 +370,11 @@ jobs:
           echo "| Container | Version |" >> $GITHUB_STEP_SUMMARY
           echo "|:-|:-|" >> $GITHUB_STEP_SUMMARY
           supervisor_version=$(jq -r ".supervisor" output/build/hassio-*/version.json)
-          landingpage_version=$(curl -fsSL https://api.github.com/repos/muthur-command/landingpage/releases/latest | jq -r '.tag_name')
+          mc_fd_version=$(curl -fsSL https://api.github.com/repos/muthur-command/mc_fd/releases/latest | jq -r '.tag_name')
+          mc_bd_version=$(jq -r ".mc_bd // empty" output/build/hassio-*/version.json)
           echo "| supervisor | [${supervisor_version}](https://github.com/muthur-command/supervisor/releases/tag/${supervisor_version}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| landingpage | [${landingpage_version}](https://github.com/muthur-command/landingpage/releases/tag/${landingpage_version}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| mc_fd | [${mc_fd_version}](https://github.com/muthur-command/mc_fd/releases/tag/${mc_fd_version}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| mc_bd | ${mc_bd_version} |" >> $GITHUB_STEP_SUMMARY
           for plugin in dns audio cli multicast observer; do
             version=$(jq -r ".${plugin}" output/build/hassio-*/version.json)
             echo "| plugin-${plugin} | [${version}](https://github.com/muthur-command/plugin-${plugin}/releases/tag/${version}) |" >> $GITHUB_STEP_SUMMARY
@@ -456,13 +471,7 @@ jobs:
     uses: muthur-command/operating-system/.github/workflows/artifacts-index.yaml@mc
     with:
       version: ${{ needs.prepare.outputs.version_full }}
-    secrets:
-      R2_OS_ARTIFACTS_ID: ${{ secrets.R2_OS_ARTIFACTS_ID }}
-      R2_OS_ARTIFACTS_KEY: ${{ secrets.R2_OS_ARTIFACTS_KEY }}
-      R2_OS_ARTIFACTS_BUCKET: ${{ secrets.R2_OS_ARTIFACTS_BUCKET }}
-      R2_OS_ARTIFACTS_ENDPOINT: ${{ secrets.R2_OS_ARTIFACTS_ENDPOINT }}
-      CF_ZONE: ${{ secrets.CF_ZONE }}
-      CF_PURGE_TOKEN: ${{ secrets.CF_PURGE_TOKEN }}
+    secrets: inherit
 
   bump_version:
     name: Bump ${{ needs.prepare.outputs.channel }} channel version
@@ -478,30 +487,30 @@ jobs:
         persist-credentials: false
 
     - name: Initialize git
-      uses: muthur-command/actions/helpers/git-init@master
+      uses: muthur-command/actions/helpers/git-init@mc
       with:
         name: ${{ secrets.GIT_NAME }}
         email: ${{ secrets.GIT_EMAIL }}
         token: ${{ secrets.GIT_TOKEN }}
 
-    - name: Bump Home Assistant OS ${{ needs.prepare.outputs.channel }} channel version
-      uses: muthur-command/actions/helpers/version-push@master
+    - name: Bump Muthur Command OS ${{ needs.prepare.outputs.channel }} channel version
+      uses: muthur-command/actions/helpers/version-push@mc
       with:
-        key: "hassos[]"
-        key-description: "Home Assistant OS"
+        key: "mcos[]"
+        key-description: "Muthur Command OS"
         version: ${{ needs.prepare.outputs.version_full }}
         channel: ${{ needs.prepare.outputs.channel }}
 
-    - name: Bump Home Assistant OS beta channel version on stable release
+    - name: Bump Muthur Command OS beta channel version on stable release
       if: ${{ needs.prepare.outputs.channel == 'stable' }}
-      uses: muthur-command/actions/helpers/version-push@master
+      uses: muthur-command/actions/helpers/version-push@mc
       with:
-        key: "hassos[]"
-        key-description: "Home Assistant OS"
+        key: "mcos[]"
+        key-description: "Muthur Command OS"
         version: ${{ needs.prepare.outputs.version_full }}
         channel: beta
 
-    - name: Bump stable Home Assistant version for RPi Imager
+    - name: Bump stable Muthur Command OS version for RPi Imager
       if: ${{ github.event_name == 'release' && needs.prepare.outputs.channel == 'stable' }}
       uses: "./.github/actions/bump-rpi-imager-version"
       with:
