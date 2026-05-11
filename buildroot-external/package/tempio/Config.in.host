@@ -2,4 +2,5 @@ config BR2_PACKAGE_HOST_TEMPIO
 	bool "Muthur Command OS tempio (host)"
 	depends on BR2_PACKAGE_HOST_GO_HOST_ARCH_SUPPORTS
 	help
-	  Install the Muthur Command OS tempio template helper (Go text/template + sprig).
+	  Install the Muthur Command OS tempio template helper
+	  (Go text/template + sprig).
