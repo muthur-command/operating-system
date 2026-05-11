@@ -12,23 +12,23 @@ and timestamps of the first and last entry. Initial implementation
 returns boots ordered starting with the current one and doesn't allow
 any filtering (i.e. equivalent of --lines argument).
 ---
-(Backported for v256.x)
+(Backported for systemd v254.13: logs-show.h and test path adjusted.)
 Signed-off-by: Jan Čermák <sairon@sairon.cz>
 Upstream: https://github.com/systemd/systemd/pull/37574
 ---
- src/journal-remote/journal-gatewayd.c         | 129 ++++++++++++++++++
- src/shared/logs-show.c                        |   2 +-
- src/shared/logs-show.h                        |   6 +
- .../units/TEST-04-JOURNAL.journal-gatewayd.sh |   6 +
- 4 files changed, 142 insertions(+), 1 deletion(-)
+ src/journal-remote/journal-gatewayd.c              | 129 ++++++++++++++++++
+ src/shared/logs-show.c                             |   2 +-
+ src/shared/logs-show.h                             |   6 +
+ test/units/testsuite-04.journal-gatewayd.sh        |  11 +
+ 4 files changed, 147 insertions(+), 1 deletion(-)
 
 diff --git a/src/journal-remote/journal-gatewayd.c b/src/journal-remote/journal-gatewayd.c
 index dd91f22923..0999234f42 100644
 --- a/src/journal-remote/journal-gatewayd.c
 +++ b/src/journal-remote/journal-gatewayd.c
-@@ -63,6 +63,9 @@ typedef struct RequestMeta {
+@@ -59,6 +59,9 @@ typedef struct RequestMeta {
          uint64_t n_entries;
-         bool n_entries_set, since_set, until_set;
+         bool n_entries_set;
  
 +        sd_id128_t previous_boot_id;
 +        int32_t boot_index;
@@ -180,7 +180,7 @@ diff --git a/src/shared/logs-show.c b/src/shared/logs-show.c
 index 153a4110ce..014c8b690a 100644
 --- a/src/shared/logs-show.c
 +++ b/src/shared/logs-show.c
-@@ -1765,7 +1765,7 @@ int show_journal_by_unit(
+@@ -1828,9 +1828,9 @@
          return show_journal(f, j, mode, n_columns, not_before, how_many, flags, ellipsized);
  }
  
@@ -189,11 +189,13 @@ index 153a4110ce..014c8b690a 100644
                  sd_journal *j,
                  sd_id128_t previous_boot_id,
                  bool advance_older,
+                 BootId *ret) {
+ 
 diff --git a/src/shared/logs-show.h b/src/shared/logs-show.h
 index 7e7b2af901..e6162caf55 100644
 --- a/src/shared/logs-show.h
 +++ b/src/shared/logs-show.h
-@@ -70,6 +70,12 @@ void json_escape(
+@@ -72,6 +72,12 @@
                  size_t l,
                  OutputFlags flags);
  
@@ -203,22 +205,23 @@ index 7e7b2af901..e6162caf55 100644
 +                bool advance_older,
 +                BootId *ret);
 +
- int journal_find_boot(sd_journal *j, sd_id128_t boot_id, int offset, sd_id128_t *ret);
- int journal_get_boots(
-                 sd_journal *j,
-diff --git a/test/units/TEST-04-JOURNAL.journal-gatewayd.sh b/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
-index 9c7a3d05bb..35ac91ba40 100755
---- a/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
-+++ b/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
-@@ -139,6 +139,12 @@ curl -LSfs http://localhost:19531/fields/_TRANSPORT
- (! curl -LSfs http://localhost:19531/fields)
- (! curl -LSfs http://localhost:19531/fields/foo-bar-baz)
+ int journal_find_boot_by_id(sd_journal *j, sd_id128_t boot_id);
+ int journal_find_boot_by_offset(sd_journal *j, int offset, sd_id128_t *ret);
+ int journal_get_boots(sd_journal *j, BootId **ret_boots, size_t *ret_n_boots);
+diff --git a/test/units/testsuite-04.journal-gatewayd.sh b/test/units/testsuite-04.journal-gatewayd.sh
+--- a/test/units/testsuite-04.journal-gatewayd.sh
++++ b/test/units/testsuite-04.journal-gatewayd.sh
+@@ -73,6 +73,14 @@
+ (! curl -Lfs http://localhost:19531/fields)
+ (! curl -Lfs http://localhost:19531/fields/foo-bar-baz)
  
++BOOTS_JSON="$(mktemp)"
 +# /boots
-+curl -LSfs http://localhost:19531/boots >"$LOG_FILE"
-+jq --seq -s . "$LOG_FILE"
++curl -Lfs http://localhost:19531/boots >"$BOOTS_JSON"
++jq --seq -s . "$BOOTS_JSON"
 +LAST_BOOT_ID=$(journalctl --list-boots -ojson -n1 | jq -r '.[0].boot_id')
-+jq --seq -se ".[0] | select(.boot_id == \"$LAST_BOOT_ID\")" "$LOG_FILE"
++jq --seq -se ".[0] | select(.boot_id == \"$LAST_BOOT_ID\")" "$BOOTS_JSON"
++rm -f "$BOOTS_JSON"
 +
  systemctl stop systemd-journal-gatewayd.{socket,service}
  

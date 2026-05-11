@@ -18,19 +18,20 @@ the stream if follow flag is not set.
 
 Fixes #37954
 ---
-(Backported for v256.x)
+(Backported for systemd v254.x: line offsets adjusted; test path uses
+testsuite-04.journal-gatewayd.sh as in v254.)
+
 Signed-off-by: Jan Čermák <sairon@sairon.cz>
 Upstream: https://github.com/systemd/systemd/pull/37955
 ---
-src/journal-remote/journal-gatewayd.c          | 16 ++++++++++++++--
- test/units/TEST-04-JOURNAL.journal-gatewayd.sh |  6 ++++++
- 2 files changed, 20 insertions(+), 2 deletions(-)
+ src/journal-remote/journal-gatewayd.c          | 16 ++++++++++++++--
+ test/units/testsuite-04.journal-gatewayd.sh    |  8 ++++++++
+ 2 files changed, 24 insertions(+), 2 deletions(-)
 
 diff --git a/src/journal-remote/journal-gatewayd.c b/src/journal-remote/journal-gatewayd.c
-index 0661ecb1cf..5bce48d485 100644
 --- a/src/journal-remote/journal-gatewayd.c
 +++ b/src/journal-remote/journal-gatewayd.c
-@@ -181,9 +181,21 @@ static ssize_t request_reader_entries(
+@@ -177,9 +177,21 @@ static ssize_t request_reader_entries(
  
                  if (m->n_skip < 0)
                          r = sd_journal_previous_skip(m->journal, (uint64_t) -m->n_skip + 1);
@@ -54,20 +55,21 @@ index 0661ecb1cf..5bce48d485 100644
                          r = sd_journal_next(m->journal);
  
                  if (r < 0) {
-diff --git a/test/units/TEST-04-JOURNAL.journal-gatewayd.sh b/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
-index ef85dc17c6..b6dc860b63 100755
---- a/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
-+++ b/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
-@@ -82,6 +82,12 @@ timeout 5 curl -LSfs \
-      --header "Range: entries=:-20:10" \
-      http://localhost:19531/entries?follow >"$LOG_FILE"
- jq -se "length == 10" "$LOG_FILE"
+diff --git a/test/units/testsuite-04.journal-gatewayd.sh b/test/units/testsuite-04.journal-gatewayd.sh
+--- a/test/units/testsuite-04.journal-gatewayd.sh
++++ b/test/units/testsuite-04.journal-gatewayd.sh
+@@ -64,6 +64,14 @@
+ # Check if the specified cursor refers to an existing entry and return just that entry
+ curl -Lfs --header "Accept: application/json" --header "Range: entries=$TEST_CURSOR" http://localhost:19531/entries?discrete | \
+     jq -se "length == 1 and select(.[].MESSAGE == \"$TEST_MESSAGE\")"
 +# Test positive skip beyond the last entry
-+curl -LSfs \
++SKIP_LOG="$(mktemp)"
++curl -Lfs \
 +     --header "Accept: application/json" \
 +     --header "Range: entries=$TEST_CURSOR:1:1" \
-+     http://localhost:19531/entries?SYSLOG_IDENTIFIER="$TEST_TAG" >"$LOG_FILE"
-+jq -se "length == 0" "$LOG_FILE"
- # Check if the specified cursor refers to an existing entry and return just that entry
- curl -LSfs \
-      --header "Accept: application/json" \
++     http://localhost:19531/entries?SYSLOG_IDENTIFIER="$TEST_TAG" >"$SKIP_LOG"
++jq -se "length == 0" "$SKIP_LOG"
++rm -f "$SKIP_LOG"
+ # No idea how to properly parse this (jq won't cut it), so let's at least do some sanity checks that every
+ # line is either empty or begins with data:
+ curl -Lfs --header "Accept: text/event-stream" http://localhost:19531/entries | \
