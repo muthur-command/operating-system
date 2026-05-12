@@ -18,11 +18,9 @@ avoided by the sd_journal_wait().
 To fix the issue, when no matching journal events are available, set a
 flag and reuse the backoff mechanism using the sd_journal_wait().
 
-Link: https://github.com/muthur-command/operating-system/issues/4190
+Link: https://github.com/home-assistant/operating-system/issues/4190
 ---
-(Backported for systemd v254.x: hunk offsets adjusted for v254 + prior
-gatewayd patches.)
-
+(Backported for v256.x)
 Signed-off-by: Jan Čermák <sairon@sairon.cz>
 Upstream: https://github.com/systemd/systemd/pull/38422
 ---
@@ -30,9 +28,10 @@ Upstream: https://github.com/systemd/systemd/pull/38422
  1 file changed, 17 insertions(+), 14 deletions(-)
 
 diff --git a/src/journal-remote/journal-gatewayd.c b/src/journal-remote/journal-gatewayd.c
+index 5bce48d485..f7ecc352cc 100644
 --- a/src/journal-remote/journal-gatewayd.c
 +++ b/src/journal-remote/journal-gatewayd.c
-@@ -167,6 +167,7 @@ static ssize_t request_reader_entries(
+@@ -171,6 +171,7 @@ static ssize_t request_reader_entries(
  
          while (pos >= m->size) {
                  off_t sz;
@@ -40,7 +39,7 @@ diff --git a/src/journal-remote/journal-gatewayd.c b/src/journal-remote/journal-
  
                  /* End of this entry, so let's serialize the next
                   * one */
-@@ -187,9 +188,10 @@ static ssize_t request_reader_entries(
+@@ -191,9 +192,10 @@ static ssize_t request_reader_entries(
                           * from it are not returned. */
                          if (r < m->n_skip + 1) {
                                  m->n_skip -= r;
@@ -54,7 +53,7 @@ diff --git a/src/journal-remote/journal-gatewayd.c b/src/journal-remote/journal-
                          }
                  } else
                          r = sd_journal_next(m->journal);
-@@ -198,20 +200,21 @@ static ssize_t request_reader_entries(
+@@ -202,20 +204,21 @@ static ssize_t request_reader_entries(
                          log_error_errno(r, "Failed to advance journal pointer: %m");
                          return MHD_CONTENT_READER_END_WITH_ERROR;
                  } else if (r == 0) {

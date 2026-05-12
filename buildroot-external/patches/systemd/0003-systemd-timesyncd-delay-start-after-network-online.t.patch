@@ -5,14 +5,14 @@ Subject: [PATCH] systemd-timesyncd: delay start after network-online.target
 
 As explained in [1], it's desired for the systemd-timesyncd to run after
 the network is deemed online, otherwise the connectivity (at least on
-MCOS with NetworkManager) is not operational when the NTP sync is
+HAOS with NetworkManager) is not operational when the NTP sync is
 attempted and it fails, delaying the boot and leading to other problems.
 Because it's not possible to remove dependencies of existing units using
 drop-ins, patch the service template file for systemd-timesyncd unit
 instead, avoiding the need for complete unit file override as in [2].
 
-[1] https://github.com/muthur-command/operating-system/pull/2068
-[2] https://github.com/muthur-command/operating-system/pull/2082
+[1] https://github.com/home-assistant/operating-system/pull/2068
+[2] https://github.com/home-assistant/operating-system/pull/2082
 ---
  units/systemd-timesyncd.service.in | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)

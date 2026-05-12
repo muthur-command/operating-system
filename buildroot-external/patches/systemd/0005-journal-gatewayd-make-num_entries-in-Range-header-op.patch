@@ -40,31 +40,34 @@ reintroduces pre-v256 compatibility.
 
 Fixes #37172
 ---
-(Backported for systemd v254.x: C code already treats an empty trailing
-num_entries segment as optional; this patch updates the man page and
-adds regression tests under the v254 test script path.)
-
+(Backported for v256.x)
 Signed-off-by: Jan Čermák <sairon@sairon.cz>
 Upstream: https://github.com/systemd/systemd/pull/37883
 ---
- man/systemd-journal-gatewayd.service.xml       | 29 ++++++++++++++-----------
- test/units/testsuite-04.journal-gatewayd.sh   | 17 +++++++++++++++
- 2 files changed, 32 insertions(+), 14 deletions(-)
+ man/systemd-journal-gatewayd.service.xml       | 13 ++++++++-----
+ src/journal-remote/journal-gatewayd.c          | 14 ++++++++------
+ test/units/TEST-04-JOURNAL.journal-gatewayd.sh | 15 +++++++++++++++
+ 3 files changed, 31 insertions(+), 11 deletions(-)
 
 diff --git a/man/systemd-journal-gatewayd.service.xml b/man/systemd-journal-gatewayd.service.xml
+index 38adfe6b4e..5dbdace78e 100644
 --- a/man/systemd-journal-gatewayd.service.xml
 +++ b/man/systemd-journal-gatewayd.service.xml
-@@ -245,16 +245,19 @@
+@@ -275,20 +275,23 @@
      <title>Range header</title>
  
      <para>
 -      <option>Range: entries=<replaceable>cursor</replaceable>[[:<replaceable>num_skip</replaceable>]:<replaceable>num_entries</replaceable>]</option>
 +      <option>Range: entries=[<replaceable>cursor</replaceable>][[:<replaceable>num_skip</replaceable>]:[<replaceable>num_entries</replaceable>]]</option>
      </para>
+     <para>
+       <option>Range: realtime=[<replaceable>since</replaceable>]:[<replaceable>until</replaceable>][[:<replaceable>num_skip</replaceable>]:<replaceable>num_entries</replaceable>]</option>
+     </para>
  
      <para>where
 -      <replaceable>cursor</replaceable> is a cursor string,
 +      <replaceable>cursor</replaceable> is a cursor string, defaults to the first entry,
+       <replaceable>since</replaceable> and <replaceable>until</replaceable> are timestamps (seconds since 1970-01-01 00:00:00 UTC),
        <replaceable>num_skip</replaceable> is an integer,
        <replaceable>num_entries</replaceable> is an unsigned integer.
      </para>
@@ -76,7 +79,7 @@ diff --git a/man/systemd-journal-gatewayd.service.xml b/man/systemd-journal-gate
    </refsect1>
  
    <refsect1>
-@@ -266,9 +269,9 @@
+@@ -300,9 +303,9 @@
        <varlistentry>
          <term><uri>follow</uri></term>
  
@@ -86,33 +89,59 @@ diff --git a/man/systemd-journal-gatewayd.service.xml b/man/systemd-journal-gate
 +        <listitem><para>wait for new events (like <command>journalctl --follow</command>, the number of
 +        events returned is not limited, unless <replaceable>num_entries</replaceable> is specified in the
 +        <replaceable>Range</replaceable> header).</para>
-         </listitem>
-       </varlistentry>
  
-diff --git a/test/units/testsuite-04.journal-gatewayd.sh b/test/units/testsuite-04.journal-gatewayd.sh
---- a/test/units/testsuite-04.journal-gatewayd.sh
-+++ b/test/units/testsuite-04.journal-gatewayd.sh
-@@ -44,6 +44,23 @@
- # Show 10 entries starting from $BOOT_CURSOR, skip the first 5
- curl -Lfs --header "Accept: application/json" --header "Range: entries=$BOOT_CURSOR:5:10" http://localhost:19531/entries | \
-     jq -se "length == 10"
-+FOLLOW_LOG="$(mktemp)"
+         <xi:include href="version-info.xml" xpointer="v197"/>
+         </listitem>
+diff --git a/src/journal-remote/journal-gatewayd.c b/src/journal-remote/journal-gatewayd.c
+index 0999234f42..0661ecb1cf 100644
+--- a/src/journal-remote/journal-gatewayd.c
++++ b/src/journal-remote/journal-gatewayd.c
+@@ -332,14 +332,16 @@ static int request_parse_range_skip_and_n_entries(
+         }
+ 
+         p = (colon2 ?: colon) + 1;
+-        r = safe_atou64(p, &m->n_entries);
+-        if (r < 0)
+-                return r;
++        if (!isempty(p)) {
++                r = safe_atou64(p, &m->n_entries);
++                if (r < 0)
++                        return r;
+ 
+-        if (m->n_entries <= 0)
+-                return -EINVAL;
++                if (m->n_entries <= 0)
++                        return -EINVAL;
+ 
+-        m->n_entries_set = true;
++                m->n_entries_set = true;
++        }
+ 
+         return 0;
+ }
+diff --git a/test/units/TEST-04-JOURNAL.journal-gatewayd.sh b/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
+index 35ac91ba40..ef85dc17c6 100755
+--- a/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
++++ b/test/units/TEST-04-JOURNAL.journal-gatewayd.sh
+@@ -67,6 +67,21 @@ curl -LSfs \
+      --header "Range: entries=$BOOT_CURSOR:5:10" \
+      http://localhost:19531/entries >"$LOG_FILE"
+ jq -se "length == 10" "$LOG_FILE"
 +# Check that follow with no num_entries follows "indefinitely"
 +(
-+    set +e
-+    timeout 5 curl -Lfs \
++    set +e; \
++    timeout 5 curl -LSfs \
 +         --header "Accept: application/json" \
 +         --header "Range: entries=:-1:" \
-+         http://localhost:19531/entries?follow >"$FOLLOW_LOG"
++         http://localhost:19531/entries?follow >"$LOG_FILE" ; \
 +    test $? -eq 124 # timeout should kill the curl process waiting for new entries
 +)
 +# Check that follow with num_entries returns the specified number of entries and exits
-+timeout 5 curl -Lfs \
++timeout 5 curl -LSfs \
 +     --header "Accept: application/json" \
 +     --header "Range: entries=:-20:10" \
-+     http://localhost:19531/entries?follow >"$FOLLOW_LOG"
-+jq -se "length == 10" "$FOLLOW_LOG"
-+rm -f "$FOLLOW_LOG"
++     http://localhost:19531/entries?follow >"$LOG_FILE"
++jq -se "length == 10" "$LOG_FILE"
  # Check if the specified cursor refers to an existing entry and return just that entry
- curl -Lfs --header "Accept: application/json" --header "Range: entries=$TEST_CURSOR" http://localhost:19531/entries?discrete | \
-     jq -se "length == 1 and select(.[].MESSAGE == \"$TEST_MESSAGE\")"
+ curl -LSfs \
+      --header "Accept: application/json" \
