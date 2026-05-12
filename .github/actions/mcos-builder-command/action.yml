@@ -15,6 +15,8 @@ runs:
       docker run --rm --privileged \
         -e BUILDER_UID="$(id -u)" \
         -e BUILDER_GID="$(id -g)" \
+        -e BR2_DL_DIR=/cache/dl \
+        -e BR2_CCACHE_DIR=/cache/cc \
         -v "${GITHUB_WORKSPACE}:/build" \
         -v "/mnt/cache:/cache" \
         -v "/mnt/output:/build/output" \
