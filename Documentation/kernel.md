@@ -1,19 +1,30 @@
 
 # Kernel Version
 
+## Mainline Linux
+
+The following boards are using [mainline Linux kernel](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/):
+
 | Board | Version |
 |-------|---------|
-| Open Virtual Appliance | 6.12.79 |
+| Generic aarch64 | 6.18.29 |
+| Generic x86-64 | 6.18.29 |
+| Home Assistant Green | 6.18.29 |
+| Khadas VIM3 | 6.18.29 |
+| ODROID-C2 | 6.18.29 |
+| ODROID-C4 | 6.18.29 |
+| ODROID-M1 | 6.18.29 |
+| ODROID-M1S | 6.18.29 |
+| ODROID-N2 | 6.18.29 |
+| Open Virtual Appliance | 6.18.29 |
+
+## Raspberry Pi Linux
+
+The following boards are using [Raspberry Pi's Linux fork](https://github.com/raspberrypi/linux/):
+
+| Board | Version |
+|-------|---------|
+| Home Assistant Yellow | 6.12.75 |
 | Raspberry Pi 3 | 6.12.75 |
 | Raspberry Pi 4 | 6.12.75 |
 | Raspberry Pi 5 | 6.12.75 |
-| Yellow (CM4 hub) | 6.12.75 |
-| Green | 6.12.79 |
-| ODROID-C2 | 6.12.79 |
-| ODROID-C4 | 6.12.79 |
-| ODROID-M1 | 6.12.79 |
-| ODROID-M1S | 6.12.79 |
-| ODROID-N2 | 6.12.79 |
-| Generic aarch64 | 6.12.79 |
-| Generic x86-64 | 6.12.79 |
-| Khadas VIM3 | 6.12.79 |
