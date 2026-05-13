@@ -13,9 +13,9 @@ ConditionPathExists=/run/docker.sock
 Type=simple
 Restart=always
 RestartSec=5s
-ExecStartPre=-/usr/bin/docker stop hassio_supervisor
+ExecStartPre=-/usr/bin/docker stop mcos_supervisor
 ExecStart=/usr/sbin/mcos-supervisor
-ExecStop=-/usr/bin/docker stop hassio_supervisor
+ExecStop=-/usr/bin/docker stop mcos_supervisor
 
 [Install]
 WantedBy=multi-user.target

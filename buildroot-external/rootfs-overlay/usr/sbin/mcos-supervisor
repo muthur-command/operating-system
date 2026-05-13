@@ -11,19 +11,19 @@ set -e
 # Init supervisor
 SUPERVISOR_DATA=/mnt/data/supervisor
 SUPERVISOR_STARTUP_MARKER="/run/supervisor/startup-marker"
-SUPERVISOR_CIDFILE="${SUPERVISOR_DATA}/hassio_supervisor.cid"
+SUPERVISOR_CIDFILE="${SUPERVISOR_DATA}/mcos_supervisor.cid"
 SUPERVISOR_STARTSCRIPT_VERSION="/mnt/data/.mcos-supervisor-version"
 SUPERVISOR_IMAGE="ghcr.io/muthur-command/${SUPERVISOR_ARCH}-mcio-supervisor"
 
 SUPERVISOR_IMAGE_ID=$(docker images --no-trunc --filter "reference=${SUPERVISOR_IMAGE}:latest" --format "{{.ID}}" || echo "")
-SUPERVISOR_CONTAINER_ID=$(docker inspect --format='{{.Image}}' hassio_supervisor || echo "")
+SUPERVISOR_CONTAINER_ID=$(docker inspect --format='{{.Image}}' mcos_supervisor || echo "")
 
 # Check if previous run left the startup-marker in place. If so, we assume the
 # Container image or container is somehow corrupted.
 # Delete the container, delete the image, pull a fresh one
 if [ -f "${SUPERVISOR_STARTUP_MARKER}" ]; then
     echo "[WARNING] Supervisor container did not remove the startup marker file. Assuming container image or container corruption."
-    docker container rm --force hassio_supervisor || true
+    docker container rm --force mcos_supervisor || true
     SUPERVISOR_CONTAINER_ID=""
 
     # Make sure we delete all supervisor images
@@ -48,7 +48,7 @@ if [ -z "${SUPERVISOR_IMAGE_ID}" ]; then
     # Get version from stable channel in case we have no local version
     # information.
     if [ "${SUPERVISOR_VERSION}" = "stable" ]; then
-        SUPERVISOR_VERSION="$(curl -s --location https://version.muthur-command.com/stable.json | jq -e -r '.supervisor')"
+        SUPERVISOR_VERSION="$(curl -s --location http://version.muthur-command.com/stable.json | jq -e -r '.supervisor')"
     fi
 
     echo "[WARNING] Supervisor image missing, downloading a fresh one: ${SUPERVISOR_VERSION}"
@@ -73,7 +73,7 @@ if [ -n "${SUPERVISOR_CONTAINER_ID}" ]; then
     # Image changed, remove previous container
     if [ "${SUPERVISOR_IMAGE_ID}" != "${SUPERVISOR_CONTAINER_ID}" ]; then
         echo "[INFO] Supervisor image has been updated, destroying previous container..."
-        docker container rm --force hassio_supervisor || true
+        docker container rm --force mcos_supervisor || true
         SUPERVISOR_CONTAINER_ID=""
     fi
 
@@ -81,7 +81,7 @@ if [ -n "${SUPERVISOR_CONTAINER_ID}" ]; then
     # shellcheck disable=SC3013
     if [ ! -f "${SUPERVISOR_STARTSCRIPT_VERSION}" ] || [ "${SUPERVISOR_STARTSCRIPT_VERSION}" -nt "$0" ] || [ "${SUPERVISOR_STARTSCRIPT_VERSION}" -ot "$0" ]; then
         echo "[INFO] Supervisor start script has changed, destroying previous container..."
-        docker container rm --force hassio_supervisor || true
+        docker container rm --force mcos_supervisor || true
         SUPERVISOR_CONTAINER_ID=""
     fi
 fi
@@ -95,7 +95,7 @@ if [ -z "${SUPERVISOR_CONTAINER_ID}" ]; then
     echo "[INFO] Creating a new Supervisor container..."
     # shellcheck disable=SC2086
     docker container create \
-        --name hassio_supervisor \
+        --name mcos_supervisor \
         --privileged --security-opt apparmor="mcio-supervisor" \
         --oom-score-adj=-300 \
         --cidfile "${SUPERVISOR_CIDFILE}" \
@@ -110,7 +110,7 @@ if [ -z "${SUPERVISOR_CONTAINER_ID}" ]; then
         -v /etc/machine-id:/etc/machine-id:ro \
         -v ${SUPERVISOR_DATA}:/data:rw,slave \
         -e SUPERVISOR_SHARE=${SUPERVISOR_DATA} \
-        -e SUPERVISOR_NAME=hassio_supervisor \
+        -e SUPERVISOR_NAME=mcos_supervisor \
         -e SUPERVISOR_MACHINE=${SUPERVISOR_MACHINE} \
         "${SUPERVISOR_IMAGE}:latest"
 
@@ -122,5 +122,5 @@ fi
 # Run supervisor
 mkdir -p ${SUPERVISOR_DATA}
 echo "[INFO] Starting the Supervisor..."
-docker container start hassio_supervisor
-exec docker container wait hassio_supervisor
+docker container start mcos_supervisor
+exec docker container wait mcos_supervisor

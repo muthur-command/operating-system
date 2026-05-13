@@ -18,7 +18,7 @@ def test_init(shell, shell_json):
 
     # wait for important containers first
     while True:
-        if check_container_running("muthurcommand") and check_container_running("hassio_supervisor"):
+        if check_container_running("muthurcommand") and check_container_running("mcos_supervisor"):
             break
 
         sleep(1)
@@ -51,7 +51,7 @@ def test_os_update(shell, shell_json, target):
     shell.run_check("mc su reload --no-progress")
 
     # update OS to latest stable - in tests it should never be the same version
-    version_json = shell_json("curl -sSL https://version.muthur-command.com/stable.json")
+    version_json = shell_json("curl -sSL http://version.muthur-command.com/stable.json")
     stable_version = (version_json["mcos"])["ova"]
 
     # Core (and maybe Supervisor) might be downloaded at this point, so we need to keep trying
@@ -72,7 +72,7 @@ def test_os_update(shell, shell_json, target):
 
     # temporary needed for OS 17.0 -> 16.x path, where all containers must be re-downloaded
     while True:
-        if check_container_running("hassio_supervisor") and check_container_running("hassio_cli"):
+        if check_container_running("mcos_supervisor") and check_container_running("mcos_cli"):
             break
 
         sleep(1)

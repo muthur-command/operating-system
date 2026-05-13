@@ -9,7 +9,7 @@ The following boards are using [mainline Linux kernel](https://git.kernel.org/pu
 |-------|---------|
 | Generic aarch64 | 6.18.29 |
 | Generic x86-64 | 6.18.29 |
-| Home Assistant Green | 6.18.29 |
+| Muthur Command Green | 6.18.29 |
 | Khadas VIM3 | 6.18.29 |
 | ODROID-C2 | 6.18.29 |
 | ODROID-C4 | 6.18.29 |
@@ -24,7 +24,7 @@ The following boards are using [Raspberry Pi's Linux fork](https://github.com/ra
 
 | Board | Version |
 |-------|---------|
-| Home Assistant Yellow | 6.12.75 |
+| Muthur Command Yellow | 6.12.75 |
 | Raspberry Pi 3 | 6.12.75 |
 | Raspberry Pi 4 | 6.12.75 |
 | Raspberry Pi 5 | 6.12.75 |

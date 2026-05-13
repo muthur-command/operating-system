@@ -5,7 +5,7 @@ Subject: [PATCH] systemd-timesyncd: delay start after network-online.target
 
 As explained in [1], it's desired for the systemd-timesyncd to run after
 the network is deemed online, otherwise the connectivity (at least on
-HAOS with NetworkManager) is not operational when the NTP sync is
+MCOS with NetworkManager) is not operational when the NTP sync is
 attempted and it fails, delaying the boot and leading to other problems.
 Because it's not possible to remove dependencies of existing units using
 drop-ins, patch the service template file for systemd-timesyncd unit

@@ -12,7 +12,7 @@ emergency_shell() {
     echo "of slow internet connection. Emergency console has been started, you can use"
     echo "for example the following commands for troubleshooting:"
     echo ""
-    echo " * 'docker ps -a' - e.g. to check if 'hassio_supervisor' container is running"
+    echo " * 'docker ps -a' - e.g. to check if 'mcos_supervisor' container is running"
     echo " * 'journalctl -e' - to investigate latest system logs"
     echo " * 'exit' or Ctrl+D - to exit the emergency console and retry CLI startup"
     echo ""
@@ -24,7 +24,7 @@ trap interrupt INT
 printf "Waiting for the Muthur Command CLI to be ready..."
 
 i=0
-while [ ! "$(docker ps -q -f name=hassio_cli)" ]; do
+while [ ! "$(docker ps -q -f name=mcos_cli)" ]; do
     sleep 1
 
     if [ $((i % 4)) = 0 ]; then
@@ -41,7 +41,7 @@ while [ ! "$(docker ps -q -f name=hassio_cli)" ]; do
 done
 
 docker container exec \
-    -ti hassio_cli \
+    -ti mcos_cli \
     /usr/bin/cli.sh
 
 case $? in

@@ -31,13 +31,13 @@ def test_start_supervisor(shell, shell_json):
         return "running" in out
 
     while True:
-        if check_container_running("muthurcommand") and check_container_running("hassio_supervisor"):
+        if check_container_running("muthurcommand") and check_container_running("mcos_supervisor"):
             break
 
         sleep(1)
 
     supervisor_ip = "\n".join(
-        shell.run_check("docker inspect --format='{{.NetworkSettings.Networks.bridge.IPAddress}}' hassio_supervisor")
+        shell.run_check("docker inspect --format='{{.NetworkSettings.Networks.bridge.IPAddress}}' mcos_supervisor")
     )
 
     while True:
@@ -60,7 +60,7 @@ def test_start_supervisor(shell, shell_json):
                 continue
             jobs = jobs_info.get("data", {}).get("jobs", [])
             core_installing = any(
-                j.get("name") == "home_assistant_core_install" and not j.get("done")
+                j.get("name") == "mcos_core_install" and not j.get("done")
                 for j in jobs
             )
             if core_installing:
@@ -195,7 +195,7 @@ def test_restart_supervisor(shell, shell_json):
     assert result.get("result") == "ok", f"Supervisor restart failed: {result}"
 
     supervisor_ip = "\n".join(
-        shell.run_check("docker inspect --format='{{.NetworkSettings.Networks.bridge.IPAddress}}' hassio_supervisor")
+        shell.run_check("docker inspect --format='{{.NetworkSettings.Networks.bridge.IPAddress}}' mcos_supervisor")
     )
 
     while True:

@@ -26,7 +26,7 @@ def test_init(shell):
 
     # wait for important containers first
     while True:
-        if check_container_running("muthurcommand") and check_container_running("hassio_supervisor"):
+        if check_container_running("muthurcommand") and check_container_running("mcos_supervisor"):
             break
 
         sleep(1)
@@ -106,15 +106,15 @@ def test_host_connectivity(shell):
 @pytest.mark.timeout(10)
 def test_supervisor_connectivity(shell):
     # checks URL used by connectivity checks via docker0 bridge
-    output = shell.run_check("docker exec -ti hassio_supervisor curl -f https://checkonline.muthur-command.io/online.txt")
+    output = shell.run_check("docker exec -ti mcos_supervisor curl -f https://checkonline.muthur-command.io/online.txt")
     assert "NetworkManager is online" in output
 
 
 @pytest.mark.dependency(depends=["test_init"])
 @pytest.mark.timeout(10)
-def test_hassio_connectivity(shell):
-    # checks URL used by connectivity checks via hassio bridge
-    output = shell.run_check("docker exec -ti hassio_cli curl -f https://checkonline.muthur-command.io/online.txt")
+def test_mcos_connectivity(shell):
+    # checks URL used by connectivity checks via mcos bridge
+    output = shell.run_check("docker exec -ti mcos_cli curl -f https://checkonline.muthur-command.io/online.txt")
     assert "NetworkManager is online" in output
 
 

@@ -38,7 +38,7 @@ def test_ha_runs_offline(shell):
 
     # wait for supervisor to create network
     while True:
-        if check_container_running("hassio_supervisor"):
+        if check_container_running("mcos_supervisor"):
             nm_conns = shell.run_check('nmcli con show')
             if "Supervisor" in " ".join(nm_conns):
                 break
@@ -54,12 +54,12 @@ def test_ha_runs_offline(shell):
     _check_connectivity(shell, connected=False)
 
     for _ in range(60):
-        if check_container_running("muthurcommand") and check_container_running("hassio_cli"):
+        if check_container_running("muthurcommand") and check_container_running("mcos_cli"):
             break
         sleep(1)
     else:
-        shell.run_check("docker logs hassio_supervisor")
-        raise AssertionError("muthurcommand or hassio_cli not running after 60s")
+        shell.run_check("docker logs mcos_supervisor")
+        raise AssertionError("muthurcommand or mcos_cli not running after 60s")
 
     web_index = shell.run_check("curl http://localhost:8123")
     assert "</html>" in " ".join(web_index)
