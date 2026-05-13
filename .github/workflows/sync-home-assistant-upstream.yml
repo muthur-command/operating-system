@@ -1,0 +1,38 @@
+# Daily sync of the Home Assistant OS upstream default branch (dev) to this repo's upstream branch.
+# Note: schedule runs in UTC. For 00:00 Beijing time daily, use cron: '0 16 * * *' (UTC).
+name: Sync Home Assistant upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-home-assistant-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git author for sync commits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync upstream branch from home-assistant/operating-system
+        env:
+          TRACK_BRANCH: dev
+        run: |
+          chmod +x scripts/sync-upstream-from-home-assistant.sh
+          ./scripts/sync-upstream-from-home-assistant.sh
