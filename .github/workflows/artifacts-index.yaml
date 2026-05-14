@@ -21,8 +21,8 @@ on:
 env:
   PYTHON_VERSION: "3.13"
   MCOS_ARTIFACTS_S3_BUCKET: os-artifacts-muthur-command
-  MCOS_ARTIFACTS_S3_PUBLIC_BASE: http://s3.muthur-command.com
-  MCOS_ARTIFACTS_CDN_BASE: http://os-artifacts.muthur-command.com
+  MCOS_ARTIFACTS_S3_PUBLIC_BASE: https://s3.muthur-command.com
+  MCOS_ARTIFACTS_CDN_BASE: https://os-artifacts.muthur-command.com
   MCOS_S3_NO_VERIFY_SSL: ${{ vars.MCOS_S3_NO_VERIFY_SSL }}
 
 jobs:

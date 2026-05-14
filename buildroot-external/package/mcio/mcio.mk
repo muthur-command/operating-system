@@ -9,7 +9,7 @@ MCIO_LICENSE = Apache License 2.0
 # MCIO_LICENSE_FILES = $(BR2_EXTERNAL_MCOS_PATH)/../LICENSE
 MCIO_SITE = $(BR2_EXTERNAL_MCOS_PATH)/package/mcio
 MCIO_SITE_METHOD = local
-MCIO_VERSION_URL = "http://version.muthur-command.com/"
+MCIO_VERSION_URL = "https://version.muthur-command.com/"
 ifeq ($(BR2_PACKAGE_MCIO_CHANNEL_STABLE),y)
 MCIO_VERSION_CHANNEL = "stable"
 else ifeq ($(BR2_PACKAGE_MCIO_CHANNEL_BETA),y)

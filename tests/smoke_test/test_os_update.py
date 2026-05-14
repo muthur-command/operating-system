@@ -51,7 +51,7 @@ def test_os_update(shell, shell_json, target):
     shell.run_check("mc su reload --no-progress")
 
     # update OS to latest stable - in tests it should never be the same version
-    version_json = shell_json("curl -sSL http://version.muthur-command.com/stable.json")
+    version_json = shell_json("curl -sSL https://version.muthur-command.com/stable.json")
     stable_version = (version_json["mcos"])["ova"]
 
     # Core (and maybe Supervisor) might be downloaded at this point, so we need to keep trying
