@@ -18,11 +18,12 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
+          # Sync checks out HA's tree and its submodules; avoid initializing mc fork submodules first.
+          submodules: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git author for sync commits

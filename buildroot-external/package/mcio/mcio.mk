@@ -22,7 +22,9 @@ MCIO_CONTAINER_IMAGES_ARCH = supervisor dns audio cli multicast observer mc_bd
 MCIO_CONTAINER_IMAGES_NOARCH = mc_fd postgresql redis
 
 define MCIO_CONFIGURE_CMDS
-	curl -s $(MCIO_VERSION_URL)$(MCIO_VERSION_CHANNEL)".json" > $(@D)/version.json
+	$(BR2_EXTERNAL_MCOS_PATH)/package/mcio/fetch-version-json.sh \
+		"$(MCIO_VERSION_URL)$(MCIO_VERSION_CHANNEL).json" \
+		"$(@D)/version.json"
 endef
 
 define MCIO_BUILD_CMDS

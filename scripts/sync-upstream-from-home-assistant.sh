@@ -15,7 +15,9 @@ if ! git remote get-url "$UPSTREAM_REMOTE" >/dev/null 2>&1; then
 	git remote add "$UPSTREAM_REMOTE" "$UPSTREAM_URL"
 fi
 
-git fetch "$UPSTREAM_REMOTE" "$TRACK_BRANCH"
+# Do not recurse into submodules while fetching HA: our default remote may still
+# point at muthur-command/buildroot, but HA dev pins commits on home-assistant/buildroot.
+git -c fetch.recurseSubmodules=false fetch "$UPSTREAM_REMOTE" "$TRACK_BRANCH"
 git checkout -B "$LOCAL_BRANCH" "${UPSTREAM_REMOTE}/${TRACK_BRANCH}"
 git submodule sync --recursive
 git submodule update --init --recursive
