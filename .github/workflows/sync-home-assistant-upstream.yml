@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  # Required to push HA's .github/workflows/* onto the upstream mirror branch.
+  workflows: write
 
 concurrency:
   group: sync-home-assistant-upstream
