@@ -52,6 +52,7 @@ jobs:
 
       - name: Sync upstream branch from home-assistant/operating-system
         env:
+          UPSTREAM_URL: https://github.com/home-assistant/operating-system.git
           TRACK_BRANCH: dev
         run: |
           chmod +x scripts/sync-upstream-from-home-assistant.sh
