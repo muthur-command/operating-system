@@ -25,6 +25,8 @@ jobs:
           fetch-depth: 0
           # Sync checks out HA's tree and its submodules; avoid initializing mc fork submodules first.
           submodules: false
+          # Do not cache GITHUB_TOKEN; push must use GIT_TOKEN (see next steps).
+          persist-credentials: false
 
       - name: Configure Git author for sync commits
         run: |
@@ -44,6 +46,8 @@ jobs:
         env:
           GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
         run: |
+          # Checkout may leave a credential helper pointing at GITHUB_TOKEN (github-actions[bot]).
+          git config --global --unset-all credential.helper || true
           git remote set-url origin "https://x-access-token:${GIT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
       - name: Sync upstream branch from home-assistant/operating-system
