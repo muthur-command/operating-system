@@ -7,10 +7,9 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
+# GITHUB_TOKEN cannot update .github/workflows/* on push; use GIT_TOKEN (PAT with workflow scope).
 permissions:
-  contents: write
-  # Required to push HA's .github/workflows/* onto the upstream mirror branch.
-  workflows: write
+  contents: read
 
 concurrency:
   group: sync-home-assistant-upstream
@@ -26,7 +25,7 @@ jobs:
           fetch-depth: 0
           # Sync checks out HA's tree and its submodules; avoid initializing mc fork submodules first.
           submodules: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GIT_TOKEN }}
 
       - name: Configure Git author for sync commits
         run: |
