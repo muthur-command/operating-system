@@ -90,8 +90,12 @@ runs:
         INPUTS_VERSION: ${{ inputs.version }}
       run: |
         cd /tmp/version
-        git commit -am "Bump Muthur Command OS to ${INPUTS_VERSION} for RPi Imager"
-        git push
+        if git diff --quiet && git diff --cached --quiet; then
+          echo "RPi Imager version already set to ${INPUTS_VERSION}, skipping commit"
+        else
+          git commit -am "Bump Muthur Command OS to ${INPUTS_VERSION} for RPi Imager"
+          git push
+        fi
 
     - shell: bash
       run: rm -rf /tmp/version
