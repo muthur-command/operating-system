@@ -4,7 +4,10 @@ BOOTSTATE_SIZE=8M
 SYSTEM_SIZE=256M
 KERNEL_SIZE=24M
 OVERLAY_SIZE=96M
-DATA_SIZE=1280M
+# DATA_SIZE is derived from the actual data.ext4 size produced by
+# create-data-partition.sh (after optional shrink). Override by exporting
+# DATA_SIZE before invoking the build. mcos-expand grows the partition back
+# to the physical disk on first boot.
 
 function create_disk_image() {
     if [ -f "${BOARD_DIR}/genimage.cfg" ]; then
@@ -24,6 +27,14 @@ function create_disk_image() {
     ota_version="$(mcos_version)"
     export ota_compatible ota_version
     # variables used in genimage configs
+    if [ -z "${DATA_SIZE:-}" ]; then
+        if [ -f "$(path_data_img)" ]; then
+            data_bytes=$(stat -c %s "$(path_data_img)")
+            DATA_SIZE="${data_bytes}"
+        else
+            DATA_SIZE="1280M"
+        fi
+    fi
     export BOOTSTATE_SIZE SYSTEM_SIZE KERNEL_SIZE OVERLAY_SIZE DATA_SIZE
     RAUC_MANIFEST=$(tempio -template "${BR2_EXTERNAL_MCOS_PATH}/ota/manifest.raucm.gtpl")
     IMAGE_NAME="$(mcos_image_basename)"
@@ -89,9 +100,10 @@ function convert_disk_image_xz() {
     local hdd_ext=${1:-img}
     local hdd_img
     hdd_img="$(mcos_image_name "${hdd_ext}")"
+    local xz_level="${MCOS_XZ_LEVEL:--6}"
 
     rm -f "${hdd_img}.xz"
-    xz -3 -T0 "${hdd_img}"
+    xz "${xz_level}" -T0 "${hdd_img}"
 }
 
 function convert_disk_image_zip() {

@@ -3,6 +3,34 @@ set -e
 
 USER="root"
 
+# Optional registry mirror for nested dockerd (e.g. when Docker Hub is slow/blocked).
+if [ -n "${DOCKER_REGISTRY_MIRROR:-}" ]; then
+	mkdir -p /etc/docker /etc/containers/registries.conf.d
+	printf '%s\n' \
+		'{' \
+		"  \"registry-mirrors\": [\"${DOCKER_REGISTRY_MIRROR}\"]" \
+		'}' \
+		> /etc/docker/daemon.json
+
+	# skopeo does not read daemon.json; mirror docker.io the same way.
+	mirror_host="${DOCKER_REGISTRY_MIRROR#*://}"
+	mirror_host="${mirror_host%%/*}"
+	printf '%s\n' \
+		'[[registry]]' \
+		'prefix = "docker.io"' \
+		'location = "docker.io"' \
+		'' \
+		'[[registry.mirror]]' \
+		"location = \"${mirror_host}\"" \
+		> /etc/containers/registries.conf.d/000-docker-mirror.conf
+fi
+
+# Nested dockerd often has no IPv6 route but still resolves AAAA records first.
+if [ "${MCIO_DISABLE_IPV6:-1}" = "1" ]; then
+	sysctl -w net.ipv6.conf.all.disable_ipv6=1 > /dev/null 2>&1 || true
+	sysctl -w net.ipv6.conf.default.disable_ipv6=1 > /dev/null 2>&1 || true
+fi
+
 # Run dockerd
 dockerd -s vfs &> /dev/null &
 

@@ -12,7 +12,7 @@ dl_dir=$5
 dst_dir=$6
 
 retry() {
-	local retries="$1"
+	local retries="${1:-5}"
 	local cmd=$2
 	local delay=5
 
@@ -48,12 +48,38 @@ case "${arch}" in
 	*) oci_arch="${arch}" ;;
 esac
 
-image_digest=$(retry 3 "skopeo inspect --override-arch '${oci_arch}' 'docker://${full_image_name}' | jq -r '.Digest'")
+image_file_prefix="${full_image_name//[:\/]/_}@"
+find_cached_image() {
+	local match
+	shopt -s nullglob
+	local -a matches=( "${dl_dir}/${image_file_prefix}"*.tar )
+	shopt -u nullglob
 
-# Cleanup image name file name use
-image_file_name="${full_image_name//[:\/]/_}@${image_digest//[:\/]/_}"
-image_file_path="${dl_dir}/${image_file_name}.tar"
-dst_image_file_path="${dst_dir}/${image_file_name}.tar"
+	if [ "${#matches[@]}" -eq 0 ]; then
+		return 1
+	fi
+
+	if [ "${#matches[@]}" -gt 1 ]; then
+		echo "Warning: multiple cached images for ${full_image_name}, using ${matches[0]}" >&2
+	fi
+
+	match="${matches[0]}"
+	image_file_path="${match}"
+	image_digest="${match##*/}"
+	image_digest="${image_digest%.tar}"
+	image_digest="${image_digest#*@}"
+	image_digest="${image_digest/_/:}"
+	return 0
+}
+
+if ! find_cached_image; then
+	image_digest=$(retry 5 "skopeo inspect --override-arch '${oci_arch}' 'docker://${full_image_name}' | jq -r '.Digest'")
+	# Cleanup image name file name use
+	image_file_name="${full_image_name//[:\/]/_}@${image_digest//[:\/]/_}"
+	image_file_path="${dl_dir}/${image_file_name}.tar"
+fi
+
+dst_image_file_path="${dst_dir}/$(basename "${image_file_path}")"
 
 (
 	# Use file locking to avoid race condition
@@ -61,7 +87,7 @@ dst_image_file_path="${dst_dir}/${image_file_name}.tar"
 	if [ ! -f "${image_file_path}" ]
 	then
 		echo "Fetching image: ${full_image_name} (digest ${image_digest})"
-		retry 3 "skopeo copy --override-arch '${oci_arch}' 'docker://${image_name}@${image_digest}' 'oci-archive:${image_file_path}:${full_image_name}'"
+		retry 5 "skopeo copy --override-arch '${oci_arch}' 'docker://${image_name}@${image_digest}' 'oci-archive:${image_file_path}:${full_image_name}'"
 	else
 		echo "Skipping download of existing image: ${full_image_name} (digest ${image_digest})"
 	fi

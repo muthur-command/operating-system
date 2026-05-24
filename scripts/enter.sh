@@ -33,4 +33,8 @@ docker run --rm --privileged \
   ${TTY_OPTS} \
   -v "$(pwd):/build" -v "${CACHE_DIR}:/cache" \
   -e BUILDER_UID="${BUILDER_UID}" -e BUILDER_GID="${BUILDER_GID}" \
+  -e DOCKER_REGISTRY_MIRROR="${DOCKER_REGISTRY_MIRROR:-}" \
+  -e MCIO_DIND_IMAGE="${MCIO_DIND_IMAGE:-}" \
+  -e MCIO_DATA_PART_SIZE="${MCIO_DATA_PART_SIZE:-}" \
+  -e MCIO_DISABLE_IPV6="${MCIO_DISABLE_IPV6:-1}" \
   mcos:local "${@:-bash}"
