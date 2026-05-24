@@ -37,6 +37,10 @@ env:
   MCOS_ARTIFACTS_S3_BUCKET: os-artifacts-muthur-command
   MCOS_ARTIFACTS_S3_PUBLIC_BASE: https://s3.muthur-command.com
   MCOS_S3_NO_VERIFY_SSL: ${{ vars.MCOS_S3_NO_VERIFY_SSL }}
+  # Avoid aws-chunked uploads: AList/openresty S3-compatible backends store the raw
+  # chunk framing in the object body, breaking artifact downloads.
+  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
 
 jobs:
   prepare:
@@ -243,7 +247,7 @@ jobs:
 
       - name: Install AWS CLI
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        run: pip install 'awscli<1.37.0'
+        run: pip install awscli
 
       - name: Set version suffix
         if: ${{ github.event_name != 'release' }}
@@ -333,12 +337,15 @@ jobs:
             echo "::warning::MCOS_S3_NO_VERIFY_SSL=true — skipping TLS verify (not for production)."
             AWS_SSL=(--no-verify-ssl)
           fi
-          aws "${AWS_SSL[@]}" s3 sync \
-            ./ \
-            "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${{ needs.prepare.outputs.version_full }}/" \
-            --exclude "*" \
-            --include "mcos_*" \
-            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
+          # Use cp (not sync): sync lists the remote prefix and requires LastModified on
+          # every object, which fails on some S3-compatible backends and during parallel
+          # matrix uploads to the same version prefix.
+          shopt -s nullglob
+          for f in mcos_*; do
+            aws "${AWS_SSL[@]}" s3 cp "$f" \
+              "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${{ needs.prepare.outputs.version_full }}/$f" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
+          done
 
       - name: Upload release assets
         if: ${{ github.event_name == 'release' }}
