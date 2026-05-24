@@ -135,17 +135,17 @@ jobs:
 
           if [[ "${{ inputs.hassio_channel }}" == "default" ]]; then
             if [[ "${{ github.event_name }}" == "release" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_HASSIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
+              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
             else
-              echo "hassio_channel_option=BR2_PACKAGE_HASSIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
+              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
             fi
           else
             if [[ "${{ inputs.hassio_channel }}" == "stable" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_HASSIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
+              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
             elif [[ "${{ inputs.hassio_channel }}" == "beta" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_HASSIO_CHANNEL_BETA" >> "$GITHUB_OUTPUT"
+              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_BETA" >> "$GITHUB_OUTPUT"
             elif [[ "${{ inputs.hassio_channel }}" == "dev" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_HASSIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
+              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
             fi
           fi
 
@@ -296,7 +296,7 @@ jobs:
           command: make ${{ matrix.board.defconfig }}_defconfig
 
       - name: Override release channel
-        if: ${{ needs.prepare.outputs.hassio_channel_option != 'BR2_PACKAGE_HASSIO_CHANNEL_STABLE' }}
+        if: ${{ needs.prepare.outputs.hassio_channel_option != 'BR2_PACKAGE_MCIO_CHANNEL_STABLE' }}
         uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
