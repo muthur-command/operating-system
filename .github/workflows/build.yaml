@@ -247,7 +247,16 @@ jobs:
 
       - name: Install AWS CLI
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        run: pip install awscli
+        run: |
+          pip install awscli
+          # AList/S3-compatible backends often reject concurrent UploadPart calls or
+          # invalidate the multipart session mid-transfer (NoSuchUpload). Use serial
+          # uploads with larger parts and no read timeout for multi-GB artifacts.
+          aws configure set default.s3.max_concurrent_requests 1
+          aws configure set default.s3.multipart_chunksize 64MB
+          aws configure set default.s3.multipart_threshold 64MB
+          aws configure set default.cli_read_timeout 0
+          aws configure set default.cli_connect_timeout 60
 
       - name: Set version suffix
         if: ${{ github.event_name != 'release' }}
@@ -340,11 +349,27 @@ jobs:
           # Use cp (not sync): sync lists the remote prefix and requires LastModified on
           # every object, which fails on some S3-compatible backends and during parallel
           # matrix uploads to the same version prefix.
+          s3_upload() {
+            local src="$1"
+            local dst="s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${{ needs.prepare.outputs.version_full }}/${src}"
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              echo "Uploading ${src} (attempt ${attempt}/5)..."
+              if aws "${AWS_SSL[@]}" s3 cp "$src" "$dst" \
+                  --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+                  --only-show-errors; then
+                echo "Uploaded ${src}"
+                return 0
+              fi
+              echo "::warning::Upload attempt ${attempt} failed for ${src}, retrying in $((attempt * 30))s..."
+              sleep $((attempt * 30))
+            done
+            echo "::error::Failed to upload ${src} after 5 attempts"
+            return 1
+          }
           shopt -s nullglob
           for f in mcos_*; do
-            aws "${AWS_SSL[@]}" s3 cp "$f" \
-              "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${{ needs.prepare.outputs.version_full }}/$f" \
-              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
+            s3_upload "$f"
           done
 
       - name: Upload release assets
