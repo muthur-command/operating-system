@@ -24,7 +24,7 @@ trap interrupt INT
 printf "Waiting for the Muthur Command CLI to be ready..."
 
 i=0
-while [ ! "$(docker ps -q -f name=mcos_cli)" ]; do
+while [ ! "$(docker ps -q -f name=mcio_cli)" ]; do
     sleep 1
 
     if [ $((i % 4)) = 0 ]; then
@@ -41,7 +41,7 @@ while [ ! "$(docker ps -q -f name=mcos_cli)" ]; do
 done
 
 docker container exec \
-    -ti mcos_cli \
+    -ti mcio_cli \
     /usr/bin/cli.sh
 
 case $? in

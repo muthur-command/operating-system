@@ -249,12 +249,12 @@ jobs:
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
         run: |
           pip install awscli
-          # AList/S3-compatible backends often reject concurrent UploadPart calls or
-          # invalidate the multipart session mid-transfer (NoSuchUpload). Use serial
-          # uploads with larger parts and no read timeout for multi-GB artifacts.
+          # AList/S3-compatible backends: serial multipart parts (NoSuchUpload), chunk
+          # size within reverse-proxy body limit (413 on UploadPart). Default 8MB works;
+          # 64MB exceeds typical nginx client_max_body_size.
           aws configure set default.s3.max_concurrent_requests 1
-          aws configure set default.s3.multipart_chunksize 64MB
-          aws configure set default.s3.multipart_threshold 64MB
+          aws configure set default.s3.multipart_chunksize 8MB
+          aws configure set default.s3.multipart_threshold 8MB
           aws configure set default.cli_read_timeout 0
           aws configure set default.cli_connect_timeout 60
 
@@ -361,8 +361,11 @@ jobs:
                 echo "Uploaded ${src}"
                 return 0
               fi
-              echo "::warning::Upload attempt ${attempt} failed for ${src}, retrying in $((attempt * 30))s..."
-              sleep $((attempt * 30))
+              echo "::warning::Upload attempt ${attempt} failed for ${src}"
+              if [ "$attempt" -lt 5 ]; then
+                echo "Retrying in $((attempt * 30))s..."
+                sleep $((attempt * 30))
+              fi
             done
             echo "::error::Failed to upload ${src} after 5 attempts"
             return 1

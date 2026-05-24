@@ -54,12 +54,12 @@ def test_ha_runs_offline(shell):
     _check_connectivity(shell, connected=False)
 
     for _ in range(60):
-        if check_container_running("muthurcommand") and check_container_running("mcos_cli"):
+        if check_container_running("muthurcommand") and check_container_running("mcio_cli"):
             break
         sleep(1)
     else:
         shell.run_check("docker logs mcos_supervisor")
-        raise AssertionError("muthurcommand or mcos_cli not running after 60s")
+        raise AssertionError("muthurcommand or mcio_cli not running after 60s")
 
     web_index = shell.run_check("curl http://localhost:8123")
     assert "</html>" in " ".join(web_index)

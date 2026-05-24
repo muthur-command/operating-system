@@ -72,7 +72,7 @@ def test_os_update(shell, shell_json, target):
 
     # temporary needed for OS 17.0 -> 16.x path, where all containers must be re-downloaded
     while True:
-        if check_container_running("mcos_supervisor") and check_container_running("mcos_cli"):
+        if check_container_running("mcos_supervisor") and check_container_running("mcio_cli"):
             break
 
         sleep(1)
