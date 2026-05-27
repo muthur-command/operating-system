@@ -1,0 +1,137 @@
+name: S3 upload smoketest
+
+on:
+  workflow_dispatch:
+    inputs:
+      multipart_size_mb:
+        description: Multipart test file size in MiB (must be >= 16)
+        required: true
+        type: string
+        default: "20"
+      keep_objects:
+        description: Keep uploaded test objects for debugging
+        required: true
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.13"
+  MCOS_ARTIFACTS_S3_BUCKET: os-artifacts-muthur-command
+  MCOS_ARTIFACTS_S3_PUBLIC_BASE: https://s3.muthur-command.com
+  MCOS_S3_NO_VERIFY_SSL: ${{ vars.MCOS_S3_NO_VERIFY_SSL }}
+  # Keep consistent with build.yaml to avoid aws-chunked framing on S3-compatible backends.
+  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+
+jobs:
+  upload-smoketest:
+    name: Upload smoketest
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Python version ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install AWS CLI
+        run: |
+          pip install awscli
+          # AList/S3-compatible backends: prefer path-style + serial multipart requests.
+          aws configure set default.s3.addressing_style path
+          aws configure set default.s3.max_concurrent_requests 1
+          aws configure set default.s3.multipart_chunksize 8MB
+          aws configure set default.s3.multipart_threshold 8MB
+          aws configure set default.cli_read_timeout 0
+          aws configure set default.cli_connect_timeout 60
+
+      - name: Upload and verify small + multipart objects
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
+          MULTIPART_SIZE_MB: ${{ inputs.multipart_size_mb }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for S3 upload."
+            exit 1
+          fi
+          if ! [[ "$MULTIPART_SIZE_MB" =~ ^[0-9]+$ ]] || [ "$MULTIPART_SIZE_MB" -lt 16 ]; then
+            echo "::error::multipart_size_mb must be an integer >= 16."
+            exit 1
+          fi
+
+          AWS_SSL=()
+          if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
+            echo "::warning::MCOS_S3_NO_VERIFY_SSL=true — skipping TLS verify (not for production)."
+            AWS_SSL=(--no-verify-ssl)
+          fi
+
+          PREFIX="ci-smoketest/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          SMALL_KEY="${PREFIX}/small.json"
+          MULTIPART_KEY="${PREFIX}/multipart-${MULTIPART_SIZE_MB}MiB.bin"
+          echo "Using prefix: ${PREFIX}"
+          echo "S3 URI: s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${PREFIX}/"
+
+          echo '{"ok":true,"source":"s3-upload-smoketest"}' > small.json
+          dd if=/dev/urandom of=multipart.bin bs=1M count="${MULTIPART_SIZE_MB}" status=none
+
+          # Keep diagnostics if any upload/verify command fails.
+          trap 'echo "::group::Multipart diagnostics"; \
+            aws "${AWS_SSL[@]}" s3api list-multipart-uploads \
+              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+              --prefix "${PREFIX}/" || true; \
+            aws "${AWS_SSL[@]}" s3api list-objects-v2 \
+              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+              --prefix "${PREFIX}/" || true; \
+            echo "::endgroup::"' ERR
+
+          aws "${AWS_SSL[@]}" s3 cp small.json "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${SMALL_KEY}" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+            --only-show-errors
+          aws "${AWS_SSL[@]}" s3 cp multipart.bin "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${MULTIPART_KEY}" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+            --only-show-errors
+
+          aws "${AWS_SSL[@]}" s3api head-object \
+            --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+            --key "${SMALL_KEY}" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
+          aws "${AWS_SSL[@]}" s3api head-object \
+            --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+            --key "${MULTIPART_KEY}" \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}"
+
+          aws "${AWS_SSL[@]}" s3 cp "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${MULTIPART_KEY}" multipart.download.bin \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+            --only-show-errors
+          sha256sum multipart.bin multipart.download.bin
+          cmp -s multipart.bin multipart.download.bin
+          echo "Smoketest upload + download verification passed."
+
+      - name: Cleanup test objects
+        if: ${{ inputs.keep_objects != true }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
+        run: |
+          set -euo pipefail
+          AWS_SSL=()
+          if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
+            AWS_SSL=(--no-verify-ssl)
+          fi
+          PREFIX="ci-smoketest/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/"
+          aws "${AWS_SSL[@]}" s3 rm "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${PREFIX}" \
+            --recursive \
+            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+            --only-show-errors
+          echo "Removed s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${PREFIX}"
