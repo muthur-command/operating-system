@@ -12,7 +12,7 @@ on:
         required: false
         type: string
       publish:
-        description: 'Publish build artifacts to S3 (not applicable to forks)'
+        description: 'Publish build artifacts to artifacts host via SSH (not applicable to forks)'
         required: true
         type: boolean
         default: true
@@ -31,16 +31,6 @@ on:
           - stable
           - beta
           - dev
-
-env:
-  PYTHON_VERSION: "3.13"
-  MCOS_ARTIFACTS_S3_BUCKET: os-artifacts-muthur-command
-  MCOS_ARTIFACTS_S3_PUBLIC_BASE: https://s3.muthur-command.com
-  MCOS_S3_NO_VERIFY_SSL: ${{ vars.MCOS_S3_NO_VERIFY_SSL }}
-  # Avoid aws-chunked uploads: AList/openresty S3-compatible backends store the raw
-  # chunk framing in the object body, breaking artifact downloads.
-  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
-  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
 
 jobs:
   prepare:
@@ -229,11 +219,15 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: ${{ github.event_name == 'release' }}
-      # Limit parallel S3 multipart uploads: AList may reuse simple uploadId values
-      # (1, 2, ...) across concurrent sessions and trigger NoSuchUpload under load.
-      max-parallel: 3
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-22.04
+    env:
+      # Same SSH endpoint as supervisor wheels upload (builder.yml).
+      MCOS_ARTIFACTS_HOST: os-artifacts.muthur-command.com
+      MCOS_ARTIFACTS_PORT: "45576"
+      MCOS_ARTIFACTS_USER: wheels
+      # AList bucket os-artifacts-muthur-command on disk; objects at {version}/mcos_*.
+      MCOS_ARTIFACTS_REMOTE_PATH: /opt/1panel/apps/alist/alist/data/data/data/muthur-command/os-artifacts
 
     steps:
       - name: Checkout source
@@ -241,28 +235,6 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
-
-      - name: Setup Python version ${{ env.PYTHON_VERSION }}
-        if: ${{ github.event_name != 'release' }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install AWS CLI
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        run: |
-          pip install awscli
-          # Match s3-upload-smoketest.yaml (verified on os-artifacts-muthur-command).
-          # path-style avoids virtual-host / endpoint mismatches on S3-compatible backends.
-          aws configure set default.s3.addressing_style path
-          # AList/S3-compatible backends: serial multipart parts (NoSuchUpload), chunk
-          # size within reverse-proxy body limit (413 on UploadPart). Default 8MB works;
-          # 64MB exceeds typical nginx client_max_body_size.
-          aws configure set default.s3.max_concurrent_requests 1
-          aws configure set default.s3.multipart_chunksize 8MB
-          aws configure set default.s3.multipart_threshold 8MB
-          aws configure set default.cli_read_timeout 0
-          aws configure set default.cli_connect_timeout 60
 
       - name: Set version suffix
         if: ${{ github.event_name != 'release' }}
@@ -335,87 +307,108 @@ jobs:
           command: |
             make BR2_CHECK_DOTCONFIG_OPTS="--github-format --strip-path-prefix=/build/" linux-check-dotconfig
 
-      - name: Upload artifacts
+      - name: Write and validate OS artifacts deploy key
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        working-directory: output/images/
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
+        shell: bash
         run: |
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "::error::Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for S3 upload."
+          raw_key="$(printf '%s' "${{ secrets.WHEELS_KEY }}" | tr -d '\r')"
+          if [ -z "$raw_key" ]; then
+            echo "::error::Secret WHEELS_KEY is empty."
             exit 1
           fi
-          AWS_SSL=()
-          if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
-            echo "::warning::MCOS_S3_NO_VERIFY_SSL=true — skipping TLS verify (not for production)."
-            AWS_SSL=(--no-verify-ssl)
+
+          mkdir -p .ssh
+          key_file=".ssh/mcos_artifacts_deploy_key"
+
+          if [[ "$raw_key" == *"-----BEGIN "* ]] && [[ "$raw_key" == *"PRIVATE KEY-----"* ]]; then
+            printf '%s\n' "$raw_key" > "$key_file"
+          else
+            key_body="$(printf '%s\n' "$raw_key" | sed -e '/^[[:space:]]*$/d')"
+            {
+              echo "-----BEGIN RSA PRIVATE KEY-----"
+              printf '%s\n' "$key_body"
+              echo "-----END RSA PRIVATE KEY-----"
+            } > "$key_file"
           fi
-          # Use cp (not sync): sync lists the remote prefix and requires LastModified on
-          # every object, which fails on some S3-compatible backends and during parallel
-          # matrix uploads to the same version prefix.
-          VERSION_PREFIX="${{ needs.prepare.outputs.version_full }}"
-          s3_abort_stale_multipart() {
-            local key="${VERSION_PREFIX}/$1"
-            local upload_ids
-            upload_ids=$(aws "${AWS_SSL[@]}" s3api list-multipart-uploads \
-              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
-              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
-              --prefix "${VERSION_PREFIX}/" \
-              --query "Uploads[?Key=='${key}'].UploadId" \
-              --output text 2>/dev/null || true)
-            for uid in ${upload_ids}; do
-              [ -z "$uid" ] || [ "$uid" = "None" ] && continue
-              echo "Aborting stale multipart upload ${uid} for ${key}"
-              aws "${AWS_SSL[@]}" s3api abort-multipart-upload \
-                --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
-                --key "$key" \
-                --upload-id "$uid" \
-                --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
-                || true
-            done
-          }
-          s3_upload_diagnostics() {
-            local src="$1"
-            echo "::group::S3 upload diagnostics for ${src}"
-            aws "${AWS_SSL[@]}" s3api list-multipart-uploads \
-              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
-              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
-              --prefix "${VERSION_PREFIX}/" || true
-            aws "${AWS_SSL[@]}" s3api list-objects-v2 \
-              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
-              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
-              --prefix "${VERSION_PREFIX}/${src}" || true
-            echo "::endgroup::"
-          }
-          s3_upload() {
-            local src="$1"
-            local dst="s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${VERSION_PREFIX}/${src}"
-            local attempt
-            for attempt in 1 2 3 4 5; do
-              echo "Uploading ${src} (attempt ${attempt}/5)..."
-              if aws "${AWS_SSL[@]}" s3 cp "$src" "$dst" \
-                  --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
-                  --only-show-errors; then
-                echo "Uploaded ${src}"
-                return 0
-              fi
-              echo "::warning::Upload attempt ${attempt} failed for ${src}"
-              if [ "$attempt" -lt 5 ]; then
-                s3_abort_stale_multipart "$src"
-                echo "Retrying in $((attempt * 30))s..."
-                sleep $((attempt * 30))
-              fi
-            done
-            s3_upload_diagnostics "$src"
-            echo "::error::Failed to upload ${src} after 5 attempts"
-            return 1
-          }
+
+          chmod 600 "$key_file"
+
+          if ! ssh-keygen -y -f "$key_file" >/dev/null 2>&1; then
+            echo "::error::WHEELS_KEY is not a valid private key for SSH authentication."
+            exit 1
+          fi
+
+      - name: Prepare SSH config for OS artifacts host
+        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
+        shell: bash
+        run: |
+          mkdir -p .ssh
+          {
+            echo "Host ${{ env.MCOS_ARTIFACTS_HOST }}"
+            echo "  HostName ${{ env.MCOS_ARTIFACTS_HOST }}"
+            echo "  Port ${{ env.MCOS_ARTIFACTS_PORT }}"
+            echo "  User ${{ env.MCOS_ARTIFACTS_USER }}"
+            echo "  IdentityFile ${{ github.workspace }}/.ssh/mcos_artifacts_deploy_key"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+            echo "  UserKnownHostsFile ${{ github.workspace }}/.ssh/known_hosts"
+          } > .ssh/config
+          ssh-keyscan -p "${{ env.MCOS_ARTIFACTS_PORT }}" -H "${{ env.MCOS_ARTIFACTS_HOST }}" >> .ssh/known_hosts
+          chmod 600 .ssh/config .ssh/known_hosts
+
+      - name: Check remote OS artifacts directory permissions
+        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
+        shell: bash
+        env:
+          VERSION_PREFIX: ${{ needs.prepare.outputs.version_full }}
+        run: |
+          set -euo pipefail
+          ssh_target="${{ env.MCOS_ARTIFACTS_USER }}@${{ env.MCOS_ARTIFACTS_HOST }}"
+          remote_base="${{ env.MCOS_ARTIFACTS_REMOTE_PATH }}"
+          remote_version="${remote_base}/${VERSION_PREFIX}"
+          fix_hint="On server (as root): chown -R wheels:wheels '${remote_base}' && chmod -R u+rwX '${remote_base}'"
+
+          if ! ssh -F .ssh/config "$ssh_target" \
+            "test -w '${remote_base}' && test -r '${remote_base}'"; then
+            echo "::error::${{ env.MCOS_ARTIFACTS_USER }} cannot read/write ${remote_base}."
+            echo "::error::${fix_hint}"
+            exit 1
+          fi
+
+          if ! ssh -F .ssh/config "$ssh_target" \
+            "mkdir -p '${remote_version}' && touch '${remote_version}/.ci-write-test' && rm -f '${remote_version}/.ci-write-test'"; then
+            echo "::error::${{ env.MCOS_ARTIFACTS_USER }} cannot create files in ${remote_version}."
+            echo "::error::${fix_hint}"
+            echo "::error::If the tree is owned by the alist container user, also set default ACL: setfacl -R -m u:wheels:rwx -d -m u:wheels:rwx '${remote_base}'"
+            exit 1
+          fi
+
+      - name: Upload artifacts via SSH + rsync
+        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
+        working-directory: output/images/
+        shell: bash
+        env:
+          VERSION_PREFIX: ${{ needs.prepare.outputs.version_full }}
+        run: |
+          set -euo pipefail
+          ssh_target="${{ env.MCOS_ARTIFACTS_USER }}@${{ env.MCOS_ARTIFACTS_HOST }}"
+          remote_dir="${{ env.MCOS_ARTIFACTS_REMOTE_PATH }}/${VERSION_PREFIX}"
+          ssh_config="${GITHUB_WORKSPACE}/.ssh/config"
+
           shopt -s nullglob
-          for f in mcos_*; do
-            s3_upload "$f"
-          done
+          files=(mcos_*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No mcos_* artifacts in output/images/"
+            exit 1
+          fi
+
+          echo "Uploading ${#files[@]} file(s) to ${remote_dir}/"
+          rsync --human-readable --progress \
+            --chmod=F664,D775 \
+            --rsh "ssh -F ${ssh_config}" \
+            "${files[@]}" \
+            "${ssh_target}:${remote_dir}/"
+          echo "Uploaded artifacts for ${VERSION_PREFIX}"
 
       - name: Upload release assets
         if: ${{ github.event_name == 'release' }}
