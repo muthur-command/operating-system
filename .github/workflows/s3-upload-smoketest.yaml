@@ -118,20 +118,26 @@ jobs:
           echo "Smoketest upload + download verification passed."
 
       - name: Cleanup test objects
-        if: ${{ inputs.keep_objects != true }}
+        if: ${{ always() && inputs.keep_objects != true }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           MCOS_S3_NO_VERIFY_SSL: ${{ env.MCOS_S3_NO_VERIFY_SSL }}
+          MULTIPART_SIZE_MB: ${{ inputs.multipart_size_mb }}
         run: |
           set -euo pipefail
           AWS_SSL=()
           if [ "${MCOS_S3_NO_VERIFY_SSL}" = "true" ]; then
             AWS_SSL=(--no-verify-ssl)
           fi
-          PREFIX="ci-smoketest/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/"
-          aws "${AWS_SSL[@]}" s3 rm "s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${PREFIX}" \
-            --recursive \
-            --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
-            --only-show-errors
-          echo "Removed s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${PREFIX}"
+          # Do not use "aws s3 rm --recursive": AList/S3-compatible backends often omit
+          # LastModified on list results, which breaks the high-level s3 rm command.
+          PREFIX="ci-smoketest/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          for key in "${PREFIX}/small.json" "${PREFIX}/multipart-${MULTIPART_SIZE_MB}MiB.bin"; do
+            aws "${AWS_SSL[@]}" s3api delete-object \
+              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+              --key "$key" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+              || true
+            echo "Deleted (or missing): s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/$key"
+          done
