@@ -12,7 +12,7 @@ on:
         required: false
         type: string
       publish:
-        description: 'Publish build artifacts to artifacts host via SSH (not applicable to forks)'
+        description: 'Update version channel metadata after build (version repo push; not applicable to forks)'
         required: true
         type: boolean
         default: true
@@ -56,7 +56,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check if build should be published
+      - name: Check if version channel should be updated
         id: check_publish
         env:
           PUBLISH_FLAG: ${{ inputs.publish }}
@@ -221,13 +221,6 @@ jobs:
       fail-fast: ${{ github.event_name == 'release' }}
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-22.04
-    env:
-      # Same SSH endpoint as supervisor wheels upload (builder.yml).
-      MCOS_ARTIFACTS_HOST: os-artifacts.muthur-command.com
-      MCOS_ARTIFACTS_PORT: "45576"
-      MCOS_ARTIFACTS_USER: wheels
-      # AList bucket os-artifacts-muthur-command on disk; objects at {version}/mcos_*.
-      MCOS_ARTIFACTS_REMOTE_PATH: /opt/1panel/apps/alist/alist/data/data/data/muthur-command/os-artifacts
 
     steps:
       - name: Checkout source
@@ -264,7 +257,7 @@ jobs:
           df -h
           sudo rm -rf /usr/local/lib/android/sdk/ndk
           sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo mkdir /mnt/cache
+          sudo mkdir -p /mnt/cache/cc /mnt/cache/dl
           sudo mkdir /mnt/output
           WORKSPACE_OWNER="$(stat -c '%U:%G' "${GITHUB_WORKSPACE}")"
           # output directory is symlinked for easier access from workspace
@@ -307,109 +300,6 @@ jobs:
           command: |
             make BR2_CHECK_DOTCONFIG_OPTS="--github-format --strip-path-prefix=/build/" linux-check-dotconfig
 
-      - name: Write and validate OS artifacts deploy key
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        shell: bash
-        run: |
-          raw_key="$(printf '%s' "${{ secrets.WHEELS_KEY }}" | tr -d '\r')"
-          if [ -z "$raw_key" ]; then
-            echo "::error::Secret WHEELS_KEY is empty."
-            exit 1
-          fi
-
-          mkdir -p .ssh
-          key_file=".ssh/mcos_artifacts_deploy_key"
-
-          if [[ "$raw_key" == *"-----BEGIN "* ]] && [[ "$raw_key" == *"PRIVATE KEY-----"* ]]; then
-            printf '%s\n' "$raw_key" > "$key_file"
-          else
-            key_body="$(printf '%s\n' "$raw_key" | sed -e '/^[[:space:]]*$/d')"
-            {
-              echo "-----BEGIN RSA PRIVATE KEY-----"
-              printf '%s\n' "$key_body"
-              echo "-----END RSA PRIVATE KEY-----"
-            } > "$key_file"
-          fi
-
-          chmod 600 "$key_file"
-
-          if ! ssh-keygen -y -f "$key_file" >/dev/null 2>&1; then
-            echo "::error::WHEELS_KEY is not a valid private key for SSH authentication."
-            exit 1
-          fi
-
-      - name: Prepare SSH config for OS artifacts host
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        shell: bash
-        run: |
-          mkdir -p .ssh
-          {
-            echo "Host ${{ env.MCOS_ARTIFACTS_HOST }}"
-            echo "  HostName ${{ env.MCOS_ARTIFACTS_HOST }}"
-            echo "  Port ${{ env.MCOS_ARTIFACTS_PORT }}"
-            echo "  User ${{ env.MCOS_ARTIFACTS_USER }}"
-            echo "  IdentityFile ${{ github.workspace }}/.ssh/mcos_artifacts_deploy_key"
-            echo "  IdentitiesOnly yes"
-            echo "  StrictHostKeyChecking yes"
-            echo "  UserKnownHostsFile ${{ github.workspace }}/.ssh/known_hosts"
-          } > .ssh/config
-          ssh-keyscan -p "${{ env.MCOS_ARTIFACTS_PORT }}" -H "${{ env.MCOS_ARTIFACTS_HOST }}" >> .ssh/known_hosts
-          chmod 600 .ssh/config .ssh/known_hosts
-
-      - name: Check remote OS artifacts directory permissions
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        shell: bash
-        env:
-          VERSION_PREFIX: ${{ needs.prepare.outputs.version_full }}
-        run: |
-          set -euo pipefail
-          ssh_target="${{ env.MCOS_ARTIFACTS_USER }}@${{ env.MCOS_ARTIFACTS_HOST }}"
-          remote_base="${{ env.MCOS_ARTIFACTS_REMOTE_PATH }}"
-          remote_version="${remote_base}/${VERSION_PREFIX}"
-          fix_hint="On server (as root): chown -R wheels:wheels '${remote_base}' && chmod -R u+rwX '${remote_base}'"
-
-          if ! ssh -F .ssh/config "$ssh_target" \
-            "test -w '${remote_base}' && test -r '${remote_base}'"; then
-            echo "::error::${{ env.MCOS_ARTIFACTS_USER }} cannot read/write ${remote_base}."
-            echo "::error::${fix_hint}"
-            exit 1
-          fi
-
-          if ! ssh -F .ssh/config "$ssh_target" \
-            "mkdir -p '${remote_version}' && touch '${remote_version}/.ci-write-test' && rm -f '${remote_version}/.ci-write-test'"; then
-            echo "::error::${{ env.MCOS_ARTIFACTS_USER }} cannot create files in ${remote_version}."
-            echo "::error::${fix_hint}"
-            echo "::error::If the tree is owned by the alist container user, also set default ACL: setfacl -R -m u:wheels:rwx -d -m u:wheels:rwx '${remote_base}'"
-            exit 1
-          fi
-
-      - name: Upload artifacts via SSH + rsync
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-        working-directory: output/images/
-        shell: bash
-        env:
-          VERSION_PREFIX: ${{ needs.prepare.outputs.version_full }}
-        run: |
-          set -euo pipefail
-          ssh_target="${{ env.MCOS_ARTIFACTS_USER }}@${{ env.MCOS_ARTIFACTS_HOST }}"
-          remote_dir="${{ env.MCOS_ARTIFACTS_REMOTE_PATH }}/${VERSION_PREFIX}"
-          ssh_config="${GITHUB_WORKSPACE}/.ssh/config"
-
-          shopt -s nullglob
-          files=(mcos_*)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "::error::No mcos_* artifacts in output/images/"
-            exit 1
-          fi
-
-          echo "Uploading ${#files[@]} file(s) to ${remote_dir}/"
-          rsync --human-readable --progress \
-            --chmod=F664,D775 \
-            --rsh "ssh -F ${ssh_config}" \
-            "${files[@]}" \
-            "${ssh_target}:${remote_dir}/"
-          echo "Uploaded artifacts for ${VERSION_PREFIX}"
-
       - name: Upload release assets
         if: ${{ github.event_name == 'release' }}
         uses: shogo82148/actions-upload-release-asset@ee2ae851dc5d938b90075b3ef12c540abfd1ee72 # v1.10.1
@@ -419,11 +309,16 @@ jobs:
 
       - name: Print cache stats
         run: |
-          echo "Cache size: $(du -sh /mnt/cache/cc)"
+          mkdir -p /mnt/cache/cc
+          echo "Cache size: $(du -sh /mnt/cache/cc | cut -f1)"
           echo "Files total: $(find /mnt/cache/cc -mindepth 1 -type f | wc -l)"
-          echo "Old files to remove: $(find /mnt/cache/cc -mindepth 1 -type f -not -anewer output/Makefile | wc -l)"
-          find /mnt/cache/cc -mindepth 1 -type f -not -anewer output/Makefile -delete
-          echo "Cache size after pruning: $(du -sh /mnt/cache/cc)"
+          if [ -f output/Makefile ]; then
+            echo "Old files to remove: $(find /mnt/cache/cc -mindepth 1 -type f -not -anewer output/Makefile | wc -l)"
+            find /mnt/cache/cc -mindepth 1 -type f -not -anewer output/Makefile -delete
+          else
+            echo "Old files to remove: 0 (output/Makefile missing, skipping prune)"
+          fi
+          echo "Cache size after pruning: $(du -sh /mnt/cache/cc | cut -f1)"
 
       - name: "Save cache: object files"
         if: github.ref == 'refs/heads/mc'
@@ -464,7 +359,7 @@ jobs:
 
       - name: Upload OS image artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id != 'ova' }}
+        if: ${{ github.event_name != 'release' && matrix.board.id != 'ova' }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.img.xz
@@ -473,7 +368,7 @@ jobs:
 
       - name: Upload RAUC bundle artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' }}
+        if: ${{ github.event_name != 'release' }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.raucb
@@ -482,7 +377,7 @@ jobs:
 
       - name: Upload Open Virtualization Format (OVA) artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'ova' }}
+        if: ${{ github.event_name != 'release' && matrix.board.id == 'ova' }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.ova
@@ -492,7 +387,7 @@ jobs:
       - name: Upload QEMU disk image artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         # Create artifact for ova every time - it's used by the called tests workflow
-        if: ${{ matrix.board.id == 'ova' || (github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'generic-aarch64') }}
+        if: ${{ matrix.board.id == 'ova' || (github.event_name != 'release' && matrix.board.id == 'generic-aarch64') }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.qcow2.xz
@@ -501,7 +396,7 @@ jobs:
 
       - name: Upload VMware Virtual Machine Disk (VMDK) artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && (matrix.board.id == 'generic-aarch64' || matrix.board.id == 'ova') }}
+        if: ${{ github.event_name != 'release' && (matrix.board.id == 'generic-aarch64' || matrix.board.id == 'ova') }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vmdk.zip
@@ -510,7 +405,7 @@ jobs:
 
       - name: Upload VirtualBox Virtual Disk Image (VDI) artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'ova' }}
+        if: ${{ github.event_name != 'release' && matrix.board.id == 'ova' }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vdi.zip
@@ -519,7 +414,7 @@ jobs:
 
       - name: Upload Virtual Hard Disk v2 (VHDX) artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build != 'true' && matrix.board.id == 'ova' }}
+        if: ${{ github.event_name != 'release' && matrix.board.id == 'ova' }}
         with:
           archive: false
           name: mcos_${{ matrix.board.id }}-${{ needs.prepare.outputs.version_full }}.vhdx.zip
@@ -533,15 +428,6 @@ jobs:
     uses: ./.github/workflows/test.yaml
     with:
       version: ${{ needs.prepare.outputs.version_full }}
-
-  update_index:
-    name: Update artifacts index
-    if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
-    needs: [ build, prepare ]
-    uses: muthur-command/operating-system/.github/workflows/artifacts-index.yaml@mc
-    with:
-      version: ${{ needs.prepare.outputs.version_full }}
-    secrets: inherit
 
   bump_version:
     name: Bump ${{ needs.prepare.outputs.channel }} channel version
