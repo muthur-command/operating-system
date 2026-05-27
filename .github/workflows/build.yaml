@@ -229,6 +229,9 @@ jobs:
     needs: prepare
     strategy:
       fail-fast: ${{ github.event_name == 'release' }}
+      # Limit parallel S3 multipart uploads: AList may reuse simple uploadId values
+      # (1, 2, ...) across concurrent sessions and trigger NoSuchUpload under load.
+      max-parallel: 3
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-22.04
 
@@ -249,6 +252,9 @@ jobs:
         if: ${{ github.event_name != 'release' && needs.prepare.outputs.publish_build == 'true' }}
         run: |
           pip install awscli
+          # Match s3-upload-smoketest.yaml (verified on os-artifacts-muthur-command).
+          # path-style avoids virtual-host / endpoint mismatches on S3-compatible backends.
+          aws configure set default.s3.addressing_style path
           # AList/S3-compatible backends: serial multipart parts (NoSuchUpload), chunk
           # size within reverse-proxy body limit (413 on UploadPart). Default 8MB works;
           # 64MB exceeds typical nginx client_max_body_size.
@@ -349,9 +355,43 @@ jobs:
           # Use cp (not sync): sync lists the remote prefix and requires LastModified on
           # every object, which fails on some S3-compatible backends and during parallel
           # matrix uploads to the same version prefix.
+          VERSION_PREFIX="${{ needs.prepare.outputs.version_full }}"
+          s3_abort_stale_multipart() {
+            local key="${VERSION_PREFIX}/$1"
+            local upload_ids
+            upload_ids=$(aws "${AWS_SSL[@]}" s3api list-multipart-uploads \
+              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+              --prefix "${VERSION_PREFIX}/" \
+              --query "Uploads[?Key=='${key}'].UploadId" \
+              --output text 2>/dev/null || true)
+            for uid in ${upload_ids}; do
+              [ -z "$uid" ] || [ "$uid" = "None" ] && continue
+              echo "Aborting stale multipart upload ${uid} for ${key}"
+              aws "${AWS_SSL[@]}" s3api abort-multipart-upload \
+                --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+                --key "$key" \
+                --upload-id "$uid" \
+                --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+                || true
+            done
+          }
+          s3_upload_diagnostics() {
+            local src="$1"
+            echo "::group::S3 upload diagnostics for ${src}"
+            aws "${AWS_SSL[@]}" s3api list-multipart-uploads \
+              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+              --prefix "${VERSION_PREFIX}/" || true
+            aws "${AWS_SSL[@]}" s3api list-objects-v2 \
+              --bucket "${{ env.MCOS_ARTIFACTS_S3_BUCKET }}" \
+              --endpoint-url "${{ env.MCOS_ARTIFACTS_S3_PUBLIC_BASE }}" \
+              --prefix "${VERSION_PREFIX}/${src}" || true
+            echo "::endgroup::"
+          }
           s3_upload() {
             local src="$1"
-            local dst="s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${{ needs.prepare.outputs.version_full }}/${src}"
+            local dst="s3://${{ env.MCOS_ARTIFACTS_S3_BUCKET }}/${VERSION_PREFIX}/${src}"
             local attempt
             for attempt in 1 2 3 4 5; do
               echo "Uploading ${src} (attempt ${attempt}/5)..."
@@ -363,10 +403,12 @@ jobs:
               fi
               echo "::warning::Upload attempt ${attempt} failed for ${src}"
               if [ "$attempt" -lt 5 ]; then
+                s3_abort_stale_multipart "$src"
                 echo "Retrying in $((attempt * 30))s..."
                 sleep $((attempt * 30))
               fi
             done
+            s3_upload_diagnostics "$src"
             echo "::error::Failed to upload ${src} after 5 attempts"
             return 1
           }
