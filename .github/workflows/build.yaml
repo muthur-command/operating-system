@@ -21,8 +21,8 @@ on:
         required: true
         type: boolean
         default: true
-      hassio_channel:
-        description: 'Release channel to use (default: stable for GH releases, dev otherwise)'
+      mcio_channel:
+        description: 'MCIO release channel (default: stable for GH releases, dev otherwise)'
         type: choice
         required: true
         default: default
@@ -45,7 +45,7 @@ jobs:
       version_main: ${{ steps.version.outputs.version_main }}
       version_full: ${{ steps.version.outputs.version_full }}
       channel: ${{ steps.channel.outputs.channel }}
-      hassio_channel_option: ${{ steps.channel.outputs.hassio_channel_option }}
+      mcio_channel_option: ${{ steps.channel.outputs.mcio_channel_option }}
       matrix: ${{ steps.generate_matrix.outputs.result }}
       build_container_image: ghcr.io/${{ github.repository_owner }}/mcos-builder@${{ steps.build_mcos_builder.outputs.digest }}
       publish_build: ${{ steps.check_publish.outputs.publish_build }}
@@ -79,7 +79,7 @@ jobs:
           PUBLISH_BUILD: ${{ steps.check_publish.outputs.publish_build }}
         run: |
           version_dev="dev$(date --utc +'%Y%m%d')"
-          if [ "${{ env.PUBLISH_BUILD }}" != "true" ] || [ "${{ github.ref }}" != "refs/heads/mc" ]; then
+          if [ "${PUBLISH_BUILD}" != "true" ] || [ "${{ github.ref }}" != "refs/heads/mc" ]; then
             version_dev="dev$(date +%s)"
           fi
           echo "Development version \"${version_dev}\""
@@ -127,20 +127,23 @@ jobs:
             echo "channel=dev" >> "$GITHUB_OUTPUT"
           fi
 
-          if [[ "${{ inputs.hassio_channel }}" == "default" ]]; then
+          # workflow_dispatch inputs are empty on release; treat unset as "default".
+          mcio_channel="${{ inputs.mcio_channel }}"
+          if [[ -z "${mcio_channel}" || "${mcio_channel}" == "default" ]]; then
             if [[ "${{ github.event_name }}" == "release" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
+              echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
             else
-              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
+              echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
             fi
+          elif [[ "${mcio_channel}" == "stable" ]]; then
+            echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
+          elif [[ "${mcio_channel}" == "beta" ]]; then
+            echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_BETA" >> "$GITHUB_OUTPUT"
+          elif [[ "${mcio_channel}" == "dev" ]]; then
+            echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
           else
-            if [[ "${{ inputs.hassio_channel }}" == "stable" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
-            elif [[ "${{ inputs.hassio_channel }}" == "beta" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_BETA" >> "$GITHUB_OUTPUT"
-            elif [[ "${{ inputs.hassio_channel }}" == "dev" ]]; then
-              echo "hassio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
-            fi
+            echo "::error::Unknown mcio_channel: ${mcio_channel}"
+            exit 1
           fi
 
       - name: Create build matrix
@@ -271,7 +274,9 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: /mnt/cache/cc
-          key: mcos-cc-${{ matrix.board.id }}
+          key: mcos-cc-${{ matrix.board.id }}-${{ github.run_id }}
+          restore-keys: |
+            mcos-cc-${{ matrix.board.id }}-
 
       - name: Generate build config
         uses: "./.github/actions/mcos-builder-command"
@@ -279,13 +284,12 @@ jobs:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: make ${{ matrix.board.defconfig }}_defconfig
 
-      - name: Override release channel
-        if: ${{ needs.prepare.outputs.hassio_channel_option != 'BR2_PACKAGE_MCIO_CHANNEL_STABLE' }}
+      - name: Override MCIO release channel
         uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: |
-            bash -c 'echo "${{ needs.prepare.outputs.hassio_channel_option }}=y" >> /build/output/.config && make olddefconfig'
+            bash -c 'echo "${{ needs.prepare.outputs.mcio_channel_option }}=y" >> /build/output/.config && make olddefconfig'
 
       - name: Build
         uses: "./.github/actions/mcos-builder-command"
@@ -329,19 +333,33 @@ jobs:
 
       - name: Generate build summary
         run: |
+          version_json=(output/build/mcio-*/version.json)
+          if [ ! -f "${version_json[0]}" ]; then
+            echo "::error::MCIO version.json not found (expected output/build/mcio-*/version.json)"
+            exit 1
+          fi
+          VERSION_JSON="${version_json[0]}"
           echo "# ${{ matrix.board.id }} build summary" >> $GITHUB_STEP_SUMMARY
           echo "## Built-in OS components" >> $GITHUB_STEP_SUMMARY
-          echo "Release channel: ${{ inputs.hassio_channel }} (${{ needs.prepare.outputs.hassio_channel_option }})" >> $GITHUB_STEP_SUMMARY
+          mcio_channel_input="${{ inputs.mcio_channel }}"
+          if [ -z "${mcio_channel_input}" ]; then
+            mcio_channel_input="default"
+          fi
+          echo "Release channel: ${mcio_channel_input} (${{ needs.prepare.outputs.mcio_channel_option }})" >> $GITHUB_STEP_SUMMARY
           echo "| Container | Version |" >> $GITHUB_STEP_SUMMARY
           echo "|:-|:-|" >> $GITHUB_STEP_SUMMARY
-          supervisor_version=$(jq -r ".supervisor" output/build/hassio-*/version.json)
-          mc_fd_version=$(curl -fsSL https://api.github.com/repos/muthur-command/mc_fd/releases/latest | jq -r '.tag_name')
-          mc_bd_version=$(jq -r ".mc_bd // empty" output/build/hassio-*/version.json)
+          supervisor_version=$(jq -r ".supervisor" "${VERSION_JSON}")
+          mc_fd_version=$(jq -r '.mc_fd // empty' "${VERSION_JSON}")
+          mc_bd_version=$(jq -r ".mc_bd // empty" "${VERSION_JSON}")
           echo "| supervisor | [${supervisor_version}](https://github.com/muthur-command/supervisor/releases/tag/${supervisor_version}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| mc_fd | [${mc_fd_version}](https://github.com/muthur-command/mc_fd/releases/tag/${mc_fd_version}) |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${mc_fd_version}" ]; then
+            echo "| mc_fd | [${mc_fd_version}](https://github.com/muthur-command/mc_fd/releases/tag/${mc_fd_version}) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| mc_fd | (not in version.json) |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| mc_bd | ${mc_bd_version} |" >> $GITHUB_STEP_SUMMARY
           for plugin in dns audio cli multicast observer; do
-            version=$(jq -r ".${plugin}" output/build/hassio-*/version.json)
+            version=$(jq -r ".${plugin}" "${VERSION_JSON}")
             echo "| plugin-${plugin} | [${version}](https://github.com/muthur-command/plugin-${plugin}/releases/tag/${version}) |" >> $GITHUB_STEP_SUMMARY
           done
           echo "## Artifacts" >> $GITHUB_STEP_SUMMARY

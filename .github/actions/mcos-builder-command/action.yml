@@ -1,4 +1,5 @@
 name: "Run command in MCOS build container"
+description: "Run a command inside the MCOS Buildroot Docker builder image"
 inputs:
   image:
     description: "MCOS builder image to use"
