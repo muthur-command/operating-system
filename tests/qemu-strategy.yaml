@@ -9,7 +9,7 @@ targets:
           cpu: qemu64
           memory: 1G
           extra_args: "-snapshot -accel kvm"
-          nic: user,model=virtio-net-pci
+          nic: user,model=virtio-net-pci,dns=8.8.8.8
           disk: disk-image
           bios: bios
       - CustomTimeoutShellDriver:

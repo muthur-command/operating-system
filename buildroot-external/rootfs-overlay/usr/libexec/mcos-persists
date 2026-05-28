@@ -27,6 +27,15 @@ elif [ -e /usr/bin/grub-editenv ]; then
         echo "[INFO] machine-id is okay"
     fi
 
+    # GRUB may save env before slot flags are populated on first boot; ensure RAUC
+    # can resolve the primary slot (see homeassistant/operating-system#3376).
+    if ! /usr/bin/grub-editenv "$GRUBENV_FILE" list | grep -q '^A_OK=1'; then
+        echo "[INFO] populate RAUC boot slot flags in grubenv"
+        /usr/bin/grub-editenv "$GRUBENV_FILE" set ORDER="A B"
+        /usr/bin/grub-editenv "$GRUBENV_FILE" set A_OK=1
+        /usr/bin/grub-editenv "$GRUBENV_FILE" set A_TRY=0
+    fi
+
 else
     if ! grep -q "systemd.machine_id=${MACHINE_ID}" /mnt/boot/cmdline.txt; then
         echo "[INFO] set machine-id to ${MACHINE_ID}"

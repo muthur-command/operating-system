@@ -1,12 +1,37 @@
 import json
 import logging
 import os
+from time import sleep
 
 from labgrid.driver import ShellDriver
 import pytest
 
 
 logger = logging.getLogger(__name__)
+
+DISABLE_AUTO_UPDATE_CMD = (
+    "rm -f /run/supervisor/startup-marker"
+    " && jq '.auto_update = false' /mnt/data/supervisor/updater.json > /tmp/updater.json"
+    " && mv /tmp/updater.json /mnt/data/supervisor/updater.json"
+    " && systemctl restart mcos-supervisor.service"
+)
+
+
+def wait_for_container(shell, container_name: str, *, timeout_s: int = 300) -> None:
+    for _ in range(timeout_s):
+        out = shell.run_check(
+            f"docker container inspect -f '{{{{.State.Status}}}}' {container_name} || true"
+        )
+        if "running" in out:
+            return
+        sleep(1)
+    shell.run_check(f"docker logs {container_name} 2>&1 | tail -80 || true")
+    pytest.fail(f"container {container_name} not running after {timeout_s}s")
+
+
+def disable_supervisor_autoupdate(shell) -> None:
+    """Disable Supervisor auto-updates without triggering image corruption recovery."""
+    shell.run_check(DISABLE_AUTO_UPDATE_CMD)
 
 
 @pytest.fixture(scope="function")

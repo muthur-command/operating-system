@@ -4,6 +4,8 @@ from time import sleep
 import pytest
 from labgrid.driver import ExecutionError
 
+from conftest import disable_supervisor_autoupdate, wait_for_container
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +20,8 @@ def stash() -> dict:
 @pytest.mark.dependency()
 @pytest.mark.timeout(360)
 def test_start_supervisor(shell, shell_json):
-    # Disable auto-updates to avoid interference with other tests,
-    # do it directly on config level and restart Supervisor via systemd.
-    shell.run_check(
-        "jq '.auto_update = false' /mnt/data/supervisor/updater.json > /tmp/updater.json"
-        " && mv /tmp/updater.json /mnt/data/supervisor/updater.json"
-        " && systemctl restart mcos-supervisor.service"
-    )
+    wait_for_container(shell, "mcos_supervisor")
+    disable_supervisor_autoupdate(shell)
 
     def check_container_running(container_name):
         out = shell.run_check(f"docker container inspect -f '{{{{.State.Status}}}}' {container_name} || true")

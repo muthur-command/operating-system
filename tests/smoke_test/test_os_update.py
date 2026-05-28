@@ -4,12 +4,17 @@ from time import sleep
 
 import pytest
 
+from conftest import wait_for_container
+
 _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(300)
 def test_init(shell, shell_json):
+    wait_for_container(shell, "mcos_supervisor")
+    wait_for_container(shell, "muthurcommand")
+
     def check_container_running(container_name):
         out = shell.run_check(
             f"docker container inspect -f '{{{{.State.Status}}}}' {container_name} || true"

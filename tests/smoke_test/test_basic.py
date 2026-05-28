@@ -3,20 +3,20 @@ from time import sleep
 
 import pytest
 
+from conftest import disable_supervisor_autoupdate, wait_for_container
+
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(300)
 def test_init(shell):
-    # Disable auto-updates to avoid interference with other tests,
-    # do it directly on config level and restart Supervisor via systemd.
-    shell.run_check(
-        "jq '.auto_update = false' /mnt/data/supervisor/updater.json > /tmp/updater.json"
-        " && mv /tmp/updater.json /mnt/data/supervisor/updater.json"
-        " && systemctl restart mcos-supervisor.service"
-    )
+    # Let the first Supervisor start finish before restarting it for tests.
+    wait_for_container(shell, "mcos_supervisor")
+
+    # Disable auto-updates to avoid interference with other tests.
+    disable_supervisor_autoupdate(shell)
 
     def check_container_running(container_name):
         out = shell.run_check(
@@ -43,6 +43,7 @@ def test_init(shell):
     _LOGGER.info("%s", "\n".join(output))
 
 
+@pytest.mark.dependency(depends=["test_init"])
 def test_rauc_status(shell, shell_json):
     rauc_status = shell.run_check("rauc status --output-format=shell --detailed")
     # RAUC_BOOT_PRIMARY won't be set if correct grub env is missing

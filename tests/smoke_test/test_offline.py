@@ -4,6 +4,8 @@ from time import sleep
 import pytest
 from labgrid.driver import ExecutionError
 
+from conftest import wait_for_container
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -27,7 +29,7 @@ def _check_connectivity(shell, *, connected):
         raise AssertionError(f"expecting connected but all targets are down")
 
 
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(300)
 @pytest.mark.usefixtures("without_internet")
 def test_ha_runs_offline(shell):
     def check_container_running(container_name):
@@ -36,12 +38,13 @@ def test_ha_runs_offline(shell):
         )
         return "running" in out
 
+    wait_for_container(shell, "mcos_supervisor")
+
     # wait for supervisor to create network
     while True:
-        if check_container_running("mcos_supervisor"):
-            nm_conns = shell.run_check('nmcli con show')
-            if "Supervisor" in " ".join(nm_conns):
-                break
+        nm_conns = shell.run_check('nmcli con show')
+        if "Supervisor" in " ".join(nm_conns):
+            break
         sleep(1)
 
     # To simulate situation where MCOS is not connected to internet, we need to add
@@ -53,13 +56,8 @@ def test_ha_runs_offline(shell):
 
     _check_connectivity(shell, connected=False)
 
-    for _ in range(60):
-        if check_container_running("muthurcommand") and check_container_running("mcio_cli"):
-            break
-        sleep(1)
-    else:
-        shell.run_check("docker logs mcos_supervisor")
-        raise AssertionError("muthurcommand or mcio_cli not running after 60s")
+    wait_for_container(shell, "muthurcommand")
+    wait_for_container(shell, "mcio_cli")
 
     web_index = shell.run_check("curl http://localhost:8123")
     assert "</html>" in " ".join(web_index)
