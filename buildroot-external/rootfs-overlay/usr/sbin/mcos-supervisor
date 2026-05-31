@@ -13,7 +13,7 @@ SUPERVISOR_DATA=/mnt/data/supervisor
 SUPERVISOR_STARTUP_MARKER="/run/supervisor/startup-marker"
 SUPERVISOR_CIDFILE="${SUPERVISOR_DATA}/mcos_supervisor.cid"
 SUPERVISOR_STARTSCRIPT_VERSION="/mnt/data/.mcos-supervisor-version"
-SUPERVISOR_IMAGE="ghcr.io/muthur-command/${SUPERVISOR_ARCH}-mcio-supervisor"
+SUPERVISOR_IMAGE="ghcr.io/muthur-command/${SUPERVISOR_ARCH}-mcos-supervisor"
 
 SUPERVISOR_IMAGE_ID=$(docker images --no-trunc --filter "reference=${SUPERVISOR_IMAGE}:latest" --format "{{.ID}}" || echo "")
 SUPERVISOR_CONTAINER_ID=$(docker inspect --format='{{.Image}}' mcos_supervisor || echo "")
@@ -96,7 +96,7 @@ if [ -z "${SUPERVISOR_CONTAINER_ID}" ]; then
     # shellcheck disable=SC2086
     docker container create \
         --name mcos_supervisor \
-        --privileged --security-opt apparmor="mcio-supervisor" \
+        --privileged --security-opt apparmor="mcos-supervisor" \
         --oom-score-adj=-300 \
         --cidfile "${SUPERVISOR_CIDFILE}" \
         --mount type=bind,src="${SUPERVISOR_CIDFILE}",dst=/run/cid,readonly \

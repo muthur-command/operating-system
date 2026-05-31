@@ -5,10 +5,10 @@ action="$1"
 
 if [ "${action}" = "freeze" ]; then
 	echo "File system freeze requested, freezing Muthur Command stack"
-	ha backups freeze
+	mc backups freeze
 elif [ "${action}" = "thaw" ]; then
 	echo "File system thaw requested, thawing Muthur Command stack"
-	ha backups thaw
+	mc backups thaw
 else
 	echo "Unknown action ${action}"
 fi

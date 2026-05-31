@@ -10,7 +10,7 @@ if [ ! -d "${PROFILES_DIR}" ]; then
     echo "[INFO]: AppArmor profile missing, downloading..."
     mkdir -p "${PROFILES_DIR}"
     systemctl start network-online.target
-    curl -sL -o "${PROFILES_DIR}"/mcio-supervisor "${APPARMOR_URL}"
+    curl -sL -o "${PROFILES_DIR}"/mcos-supervisor "${APPARMOR_URL}"
 fi
 mkdir -p "${CACHE_DIR}"
 

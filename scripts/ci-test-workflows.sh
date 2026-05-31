@@ -37,7 +37,7 @@ run_case() {
 resolve_channel_outputs() {
   local event_name="$1"
   local prerelease="$2"
-  local mcio_channel="$3"
+  local mcos_containers_channel="$3"
 
   if [[ "${event_name}" == "release" ]]; then
     if [[ "${prerelease}" == "true" ]]; then
@@ -49,29 +49,29 @@ resolve_channel_outputs() {
     CHANNEL=dev
   fi
 
-  if [[ -z "${mcio_channel}" || "${mcio_channel}" == "default" ]]; then
+  if [[ -z "${mcos_containers_channel}" || "${mcos_containers_channel}" == "default" ]]; then
     if [[ "${event_name}" == "release" ]]; then
-      MCIO_CHANNEL_OPTION=BR2_PACKAGE_MCIO_CHANNEL_STABLE
+      MCOS_CONTAINERS_CHANNEL_OPTION=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE
     else
-      MCIO_CHANNEL_OPTION=BR2_PACKAGE_MCIO_CHANNEL_DEV
+      MCOS_CONTAINERS_CHANNEL_OPTION=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV
     fi
-  elif [[ "${mcio_channel}" == "stable" ]]; then
-    MCIO_CHANNEL_OPTION=BR2_PACKAGE_MCIO_CHANNEL_STABLE
-  elif [[ "${mcio_channel}" == "beta" ]]; then
-    MCIO_CHANNEL_OPTION=BR2_PACKAGE_MCIO_CHANNEL_BETA
-  elif [[ "${mcio_channel}" == "dev" ]]; then
-    MCIO_CHANNEL_OPTION=BR2_PACKAGE_MCIO_CHANNEL_DEV
+  elif [[ "${mcos_containers_channel}" == "stable" ]]; then
+    MCOS_CONTAINERS_CHANNEL_OPTION=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE
+  elif [[ "${mcos_containers_channel}" == "beta" ]]; then
+    MCOS_CONTAINERS_CHANNEL_OPTION=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_BETA
+  elif [[ "${mcos_containers_channel}" == "dev" ]]; then
+    MCOS_CONTAINERS_CHANNEL_OPTION=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV
   else
     return 1
   fi
 }
 
 assert_channel() {
-  local event_name="$1" prerelease="$2" mcio_channel="$3"
-  local want_channel="$4" want_mcio="$5"
+  local event_name="$1" prerelease="$2" mcos_containers_channel="$3"
+  local want_channel="$4" want_mcos_containers="$5"
 
-  resolve_channel_outputs "${event_name}" "${prerelease}" "${mcio_channel}" || return 1
-  [[ "${CHANNEL}" == "${want_channel}" && "${MCIO_CHANNEL_OPTION}" == "${want_mcio}" ]]
+  resolve_channel_outputs "${event_name}" "${prerelease}" "${mcos_containers_channel}" || return 1
+  [[ "${CHANNEL}" == "${want_channel}" && "${MCOS_CONTAINERS_CHANNEL_OPTION}" == "${want_mcos_containers}" ]]
 }
 
 # --- Mirrors check_publish step ---
@@ -90,14 +90,14 @@ resolve_publish_build() {
 }
 
 test_channel_matrix() {
-  assert_channel workflow_dispatch false default dev BR2_PACKAGE_MCIO_CHANNEL_DEV &&
-  assert_channel workflow_dispatch false stable dev BR2_PACKAGE_MCIO_CHANNEL_STABLE &&
-  assert_channel workflow_dispatch false beta dev BR2_PACKAGE_MCIO_CHANNEL_BETA &&
-  assert_channel workflow_dispatch false dev dev BR2_PACKAGE_MCIO_CHANNEL_DEV &&
-  assert_channel release false "" stable BR2_PACKAGE_MCIO_CHANNEL_STABLE &&
-  # prerelease sets version channel=beta; MCIO default on release stays STABLE
-  assert_channel release true "" beta BR2_PACKAGE_MCIO_CHANNEL_STABLE &&
-  assert_channel release false stable stable BR2_PACKAGE_MCIO_CHANNEL_STABLE
+  assert_channel workflow_dispatch false default dev BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV &&
+  assert_channel workflow_dispatch false stable dev BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE &&
+  assert_channel workflow_dispatch false beta dev BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_BETA &&
+  assert_channel workflow_dispatch false dev dev BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV &&
+  assert_channel release false "" stable BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE &&
+  # prerelease sets version channel=beta; MCOS containers default on release stays STABLE
+  assert_channel release true "" beta BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE &&
+  assert_channel release false stable stable BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE
 }
 
 test_publish_matrix() {
@@ -150,8 +150,8 @@ if (!buildBoards.some(b => b.id === 'ova')) process.exit(2);
 test_build_summary_fixture() {
   local tmp="${ROOT}/.ci-test-tmp-build-summary"
   rm -rf "${tmp}"
-  mkdir -p "${tmp}/output/build/mcio-1.0.0" "${tmp}/output/images"
-  cp scripts/ci-fixtures/mcio-version.json "${tmp}/output/build/mcio-1.0.0/version.json"
+  mkdir -p "${tmp}/output/build/mcos-containers-1.0.0" "${tmp}/output/images"
+  cp scripts/ci-fixtures/mcos-version.json "${tmp}/output/build/mcos-containers-1.0.0/version.json"
   touch "${tmp}/output/images/mcos_ova-test.img.xz"
 
   (
@@ -159,7 +159,7 @@ test_build_summary_fixture() {
     export GITHUB_STEP_SUMMARY="${tmp}/summary.md"
     : > "${GITHUB_STEP_SUMMARY}"
 
-    version_json=(output/build/mcio-*/version.json)
+    version_json=(output/build/mcos-containers-*/version.json)
     [[ -f "${version_json[0]}" ]] || exit 1
     VERSION_JSON="${version_json[0]}"
 

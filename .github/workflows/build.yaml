@@ -21,8 +21,8 @@ on:
         required: true
         type: boolean
         default: true
-      mcio_channel:
-        description: 'MCIO release channel (default: stable for GH releases, dev otherwise)'
+      mcos_containers_channel:
+        description: 'MCOS containers release channel (default: stable for GH releases, dev otherwise)'
         type: choice
         required: true
         default: default
@@ -45,7 +45,7 @@ jobs:
       version_main: ${{ steps.version.outputs.version_main }}
       version_full: ${{ steps.version.outputs.version_full }}
       channel: ${{ steps.channel.outputs.channel }}
-      mcio_channel_option: ${{ steps.channel.outputs.mcio_channel_option }}
+      mcos_containers_channel_option: ${{ steps.channel.outputs.mcos_containers_channel_option }}
       matrix: ${{ steps.generate_matrix.outputs.result }}
       build_container_image: ghcr.io/${{ github.repository_owner }}/mcos-builder@${{ steps.build_mcos_builder.outputs.digest }}
       publish_build: ${{ steps.check_publish.outputs.publish_build }}
@@ -128,21 +128,21 @@ jobs:
           fi
 
           # workflow_dispatch inputs are empty on release; treat unset as "default".
-          mcio_channel="${{ inputs.mcio_channel }}"
-          if [[ -z "${mcio_channel}" || "${mcio_channel}" == "default" ]]; then
+          mcos_containers_channel="${{ inputs.mcos_containers_channel }}"
+          if [[ -z "${mcos_containers_channel}" || "${mcos_containers_channel}" == "default" ]]; then
             if [[ "${{ github.event_name }}" == "release" ]]; then
-              echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
+              echo "mcos_containers_channel_option=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
             else
-              echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
+              echo "mcos_containers_channel_option=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
             fi
-          elif [[ "${mcio_channel}" == "stable" ]]; then
-            echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
-          elif [[ "${mcio_channel}" == "beta" ]]; then
-            echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_BETA" >> "$GITHUB_OUTPUT"
-          elif [[ "${mcio_channel}" == "dev" ]]; then
-            echo "mcio_channel_option=BR2_PACKAGE_MCIO_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
+          elif [[ "${mcos_containers_channel}" == "stable" ]]; then
+            echo "mcos_containers_channel_option=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE" >> "$GITHUB_OUTPUT"
+          elif [[ "${mcos_containers_channel}" == "beta" ]]; then
+            echo "mcos_containers_channel_option=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_BETA" >> "$GITHUB_OUTPUT"
+          elif [[ "${mcos_containers_channel}" == "dev" ]]; then
+            echo "mcos_containers_channel_option=BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::Unknown mcio_channel: ${mcio_channel}"
+            echo "::error::Unknown mcos_containers_channel: ${mcos_containers_channel}"
             exit 1
           fi
 
@@ -284,12 +284,12 @@ jobs:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: make ${{ matrix.board.defconfig }}_defconfig
 
-      - name: Override MCIO release channel
+      - name: Override MCOS containers release channel
         uses: "./.github/actions/mcos-builder-command"
         with:
           image: ${{ needs.prepare.outputs.build_container_image }}
           command: |
-            bash -c 'echo "${{ needs.prepare.outputs.mcio_channel_option }}=y" >> /build/output/.config && make olddefconfig'
+            bash -c 'echo "${{ needs.prepare.outputs.mcos_containers_channel_option }}=y" >> /build/output/.config && make olddefconfig'
 
       - name: Build
         uses: "./.github/actions/mcos-builder-command"
@@ -333,19 +333,19 @@ jobs:
 
       - name: Generate build summary
         run: |
-          version_json=(output/build/mcio-*/version.json)
+          version_json=(output/build/mcos-containers-*/version.json)
           if [ ! -f "${version_json[0]}" ]; then
-            echo "::error::MCIO version.json not found (expected output/build/mcio-*/version.json)"
+            echo "::error::MCOS containers version.json not found (expected output/build/mcos-containers-*/version.json)"
             exit 1
           fi
           VERSION_JSON="${version_json[0]}"
           echo "# ${{ matrix.board.id }} build summary" >> $GITHUB_STEP_SUMMARY
           echo "## Built-in OS components" >> $GITHUB_STEP_SUMMARY
-          mcio_channel_input="${{ inputs.mcio_channel }}"
-          if [ -z "${mcio_channel_input}" ]; then
-            mcio_channel_input="default"
+          mcos_containers_channel_input="${{ inputs.mcos_containers_channel }}"
+          if [ -z "${mcos_containers_channel_input}" ]; then
+            mcos_containers_channel_input="default"
           fi
-          echo "Release channel: ${mcio_channel_input} (${{ needs.prepare.outputs.mcio_channel_option }})" >> $GITHUB_STEP_SUMMARY
+          echo "Release channel: ${mcos_containers_channel_input} (${{ needs.prepare.outputs.mcos_containers_channel_option }})" >> $GITHUB_STEP_SUMMARY
           echo "| Container | Version |" >> $GITHUB_STEP_SUMMARY
           echo "|:-|:-|" >> $GITHUB_STEP_SUMMARY
           supervisor_version=$(jq -r ".supervisor" "${VERSION_JSON}")

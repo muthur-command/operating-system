@@ -26,7 +26,7 @@ if [ -n "${DOCKER_REGISTRY_MIRROR:-}" ]; then
 fi
 
 # Nested dockerd often has no IPv6 route but still resolves AAAA records first.
-if [ "${MCIO_DISABLE_IPV6:-1}" = "1" ]; then
+if [ "${MCOS_CONTAINERS_DISABLE_IPV6:-1}" = "1" ]; then
 	sysctl -w net.ipv6.conf.all.disable_ipv6=1 > /dev/null 2>&1 || true
 	sysctl -w net.ipv6.conf.default.disable_ipv6=1 > /dev/null 2>&1 || true
 fi

@@ -57,7 +57,7 @@ def test_ha_runs_offline(shell):
     _check_connectivity(shell, connected=False)
 
     wait_for_container(shell, "muthurcommand")
-    wait_for_container(shell, "mcio_cli")
+    wait_for_container(shell, "mcos_cli")
 
     web_index = shell.run_check("curl http://localhost:8123")
     assert "</html>" in " ".join(web_index)

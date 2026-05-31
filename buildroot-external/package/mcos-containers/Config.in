@@ -1,4 +1,4 @@
-menuconfig BR2_PACKAGE_MCIO
+menuconfig BR2_PACKAGE_MCOS_CONTAINERS
 	bool "Supervisor App"
 	help
 	  This is the Application layer they build the
@@ -6,35 +6,35 @@ menuconfig BR2_PACKAGE_MCIO
 
 	  https://github.com/muthur-command/supervisor
 
-if BR2_PACKAGE_MCIO
+if BR2_PACKAGE_MCOS_CONTAINERS
 
-config BR2_PACKAGE_MCIO_ARCH
+config BR2_PACKAGE_MCOS_CONTAINERS_ARCH
 	string "Supervisor Arch"
 	help
 	  Supervisor architecture which should be pull.
 
-config BR2_PACKAGE_MCIO_MACHINE
+config BR2_PACKAGE_MCOS_CONTAINERS_MACHINE
 	string "Supervisor Machine"
 	help
 	  Machine id used when resolving images from version.json.
 
 choice
 	prompt "Default Channel"
-	default BR2_PACKAGE_MCIO_CHANNEL_STABLE
+	default BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE
 	help
 	  Channel to use by default.
 
-config BR2_PACKAGE_MCIO_CHANNEL_STABLE
+config BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_STABLE
 	bool "Stable"
 	help
 	  Stable channel.
 
-config BR2_PACKAGE_MCIO_CHANNEL_BETA
+config BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_BETA
 	bool "Beta"
 	help
 	  Beta channel.
 
-config BR2_PACKAGE_MCIO_CHANNEL_DEV
+config BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV
 	bool "Dev"
 	help
 	  Dev channel.

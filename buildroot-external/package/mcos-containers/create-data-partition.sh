@@ -9,15 +9,15 @@ docker_version=$4
 data_img="${dst_dir}/data.ext4"
 data_dir="${build_dir}/data"
 container=""
-dind_image="${MCIO_DIND_IMAGE:-docker:${docker_version}-dind}"
-# Default data partition size. Override via MCIO_DATA_PART_SIZE (e.g. 8192M).
+dind_image="${MCOS_CONTAINERS_DIND_IMAGE:-docker:${docker_version}-dind}"
+# Default data partition size. Override via MCOS_CONTAINERS_DATA_PART_SIZE (e.g. 8192M).
 # Must be large enough to hold all imported container images plus the
 # overlayfs snapshots used by containerd-snapshotter (uncompressed).
-data_part_size="${MCIO_DATA_PART_SIZE:-8192M}"
+data_part_size="${MCOS_CONTAINERS_DATA_PART_SIZE:-8192M}"
 # Set to "1" to shrink data.ext4 to minimum size after import. The runtime
 # mcos-expand service grows it back to the physical disk on first boot, so the
 # distributed image stays small.
-data_part_shrink="${MCIO_DATA_PART_SHRINK:-1}"
+data_part_shrink="${MCOS_CONTAINERS_DATA_PART_SHRINK:-1}"
 
 APPARMOR_URL="https://version.muthur-command.com/apparmor_${channel}.txt"
 
@@ -57,12 +57,12 @@ pull_dind_image() {
 		retries=$((retries - 1))
 	done
 
-	echo "::error::Failed to pull ${dind_image}. Set MCIO_DIND_IMAGE to a reachable mirror or pre-pull the image." >&2
+	echo "::error::Failed to pull ${dind_image}. Set MCOS_CONTAINERS_DIND_IMAGE to a reachable mirror or pre-pull the image." >&2
 	return 1
 }
 
 # Pull dind before mounting so a failed pull does not leave a root-owned
-# ext4 mount (lost+found) that blocks mcio-dirclean.
+# ext4 mount (lost+found) that blocks mcos-containers-dirclean.
 pull_dind_image
 
 # Make image
@@ -89,7 +89,7 @@ touch "${data_dir}/.docker-use-containerd-snapshotter"
 
 # Setup AppArmor
 mkdir -p "${data_dir}/supervisor/apparmor"
-curl -fsL -o "${data_dir}/supervisor/apparmor/mcio-supervisor" "${APPARMOR_URL}"
+curl -fsL -o "${data_dir}/supervisor/apparmor/mcos-supervisor" "${APPARMOR_URL}"
 
 # Persist build-time updater channel
 jq -n --arg channel "${channel}" '{"channel": \$channel}' > "${data_dir}/supervisor/updater.json"

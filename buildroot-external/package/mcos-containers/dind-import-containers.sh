@@ -18,9 +18,9 @@ for image in $(ls -S /build/images/*.tar); do
 done
 
 # Tag the Supervisor how the OS expects it to be tagged
-supervisor=$(docker images --filter "label=io.mcio.type=supervisor" --quiet)
-arch=$(docker inspect --format '{{ index .Config.Labels "io.mcio.arch" }}' "${supervisor}")
+supervisor=$(docker images --filter "label=io.mcos.type=supervisor" --quiet)
+arch=$(docker inspect --format '{{ index .Config.Labels "io.mcos.arch" }}' "${supervisor}")
 if [ -z "$arch" ]; then
-	arch=$(docker inspect --format '{{ index .Config.Labels "io.mcio.arch" }}' "${supervisor}")
+	arch=$(docker inspect --format '{{ index .Config.Labels "io.mcos.arch" }}' "${supervisor}")
 fi
-docker tag "${supervisor}" "ghcr.io/muthur-command/${arch}-mcio-supervisor:latest"
+docker tag "${supervisor}" "ghcr.io/muthur-command/${arch}-mcos-supervisor:latest"

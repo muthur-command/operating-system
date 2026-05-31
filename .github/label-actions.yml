@@ -39,7 +39,7 @@ supervisor-issue:
     :wave: @{issue-author}, thanks for reporting an issue!
 
 
-    It looks like this issue is related to MCIO Supervisor. Please
+    It looks like this issue is related to MCOS Supervisor. Please
     check the [supervisor](https://github.com/muthur-command/supervisor/issues)
     repository, the issue might have been reported already. Open a new issue
     in that repository if you can't find a matching issue.

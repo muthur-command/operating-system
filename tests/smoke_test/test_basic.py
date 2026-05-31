@@ -115,7 +115,7 @@ def test_supervisor_connectivity(shell):
 @pytest.mark.timeout(10)
 def test_mcos_connectivity(shell):
     # checks URL used by connectivity checks via mcos bridge
-    output = shell.run_check("docker exec -ti mcio_cli curl -f https://checkonline.muthur-command.io/online.txt")
+    output = shell.run_check("docker exec -ti mcos_cli curl -f https://checkonline.muthur-command.io/online.txt")
     assert "NetworkManager is online" in output
 
 
