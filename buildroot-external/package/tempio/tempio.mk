@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-TEMPIO_VERSION = mc_2026.04.1
+TEMPIO_VERSION = 2026.06.3
 TEMPIO_SITE = $(call github,muthur-command,tempio,$(TEMPIO_VERSION))
 TEMPIO_LICENSE = Apache License 2.0
 TEMPIO_LICENSE_FILES = LICENSE
