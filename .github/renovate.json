@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": ["custom.regex"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^buildroot-external/package/tempio/tempio\\.mk$"],
+      "matchStrings": ["TEMPIO_VERSION = (?<currentValue>[^\\s]+)"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "muthur-command/tempio",
+      "versioningTemplate": "loose"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["muthur-command/tempio"],
+      "groupName": "tempio",
+      "extractVersion": "^(?:mc_)?(?<version>.*)$",
+      "commitMessageTopic": "tempio",
+      "commitMessageExtra": "to {{newVersion}}"
+    }
+  ],
+  "schedule": ["every 12 hours"]
+}
