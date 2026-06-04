@@ -9,13 +9,13 @@
 # pattern - switch only if you publish versioned tarballs on GitHub Releases.
 # Pin to a full commit so GitHub archive URLs work without publishing tags.
 OS_AGENT_COMMIT = 4ead7a3bb4b47165627a7945870536544ca6b9c6
-OS_AGENT_VERSION = $(OS_AGENT_COMMIT)
+OS_AGENT_VERSION = 2026.06.1
 OS_AGENT_SITE = $(call github,muthur-command,os-agent,$(OS_AGENT_COMMIT))
 OS_AGENT_LICENSE = Apache License 2.0
 OS_AGENT_LICENSE_FILES = LICENSE
 OS_AGENT_GOMOD = github.com/muthur-command/os-agent
 OS_AGENT_LDFLAGS = \
-	-X main.version=1.9.0-mc.1+g4ead7a3 \
+	-X main.version=2026.06.1 \
 	-X main.board=$(BR2_PACKAGE_OS_AGENT_BOARD)
 
 define OS_AGENT_INSTALL_INIT_SYSTEMD
