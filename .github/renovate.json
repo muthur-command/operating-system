@@ -9,6 +9,17 @@
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "muthur-command/tempio",
       "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["^buildroot-external/package/os-agent/os-agent\\.mk$"],
+      "matchStrings": [
+        "OS_AGENT_VERSION = (?<currentValue>[^\\s]+)",
+        "-X main\\.version=(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "muthur-command/os-agent",
+      "versioningTemplate": "loose"
     }
   ],
   "packageRules": [
@@ -18,6 +29,14 @@
       "groupName": "tempio",
       "extractVersion": "^(?:mc_)?(?<version>.*)$",
       "commitMessageTopic": "tempio",
+      "commitMessageExtra": "to {{newVersion}}"
+    },
+    {
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["muthur-command/os-agent"],
+      "groupName": "os-agent",
+      "extractVersion": "^(?:mc_)?(?<version>.*)$",
+      "commitMessageTopic": "os-agent",
       "commitMessageExtra": "to {{newVersion}}"
     }
   ],
