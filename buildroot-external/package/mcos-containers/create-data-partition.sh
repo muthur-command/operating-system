@@ -91,8 +91,12 @@ touch "${data_dir}/.docker-use-containerd-snapshotter"
 mkdir -p "${data_dir}/supervisor/apparmor"
 curl -fsL -o "${data_dir}/supervisor/apparmor/mcos-supervisor" "${APPARMOR_URL}"
 
-# Persist build-time updater channel
-jq -n --arg channel "${channel}" '{"channel": \$channel}' > "${data_dir}/supervisor/updater.json"
+# Persist build-time updater snapshot (channel + versions/images from version.json)
+chmod +x "${build_dir}/seed-updater-from-version-json.sh"
+"${build_dir}/seed-updater-from-version-json.sh" \
+	"${build_dir}/version.json" \
+	"${channel}" \
+	"${data_dir}/supervisor/updater.json"
 EOF
 
 # Stop dind so the filesystem can be safely unmounted/shrunk.
