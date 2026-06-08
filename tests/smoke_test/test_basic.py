@@ -97,7 +97,7 @@ def test_systemctl_no_cycles(shell):
 
 
 def test_host_connectivity(shell):
-    output = shell.run_check("curl -f https://checkonline.muthur-command.io/online.txt")
+    output = shell.run_check("curl -f https://checkonline.muthur-command.com/online.txt")
     assert "NetworkManager is online" in output
     output = shell.run_check("nmcli network connectivity check")
     assert "full" in output, f"Connectivity check failed, nmcli reports: {output}"
@@ -107,7 +107,7 @@ def test_host_connectivity(shell):
 @pytest.mark.timeout(10)
 def test_supervisor_connectivity(shell):
     # checks URL used by connectivity checks via docker0 bridge
-    output = shell.run_check("docker exec -ti mcos_supervisor curl -f https://checkonline.muthur-command.io/online.txt")
+    output = shell.run_check("docker exec -ti mcos_supervisor curl -f https://checkonline.muthur-command.com/online.txt")
     assert "NetworkManager is online" in output
 
 
@@ -115,7 +115,7 @@ def test_supervisor_connectivity(shell):
 @pytest.mark.timeout(10)
 def test_mcos_connectivity(shell):
     # checks URL used by connectivity checks via mcos bridge
-    output = shell.run_check("docker exec -ti mcos_cli curl -f https://checkonline.muthur-command.io/online.txt")
+    output = shell.run_check("docker exec -ti mcos_cli curl -f https://checkonline.muthur-command.com/online.txt")
     assert "NetworkManager is online" in output
 
 
