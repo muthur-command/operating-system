@@ -3,14 +3,20 @@ from time import sleep
 
 import pytest
 
-from conftest import disable_supervisor_autoupdate, wait_for_container
+from conftest import (
+    curl_mc_fd_web,
+    disable_supervisor_autoupdate,
+    wait_for_container,
+    wait_for_mc_stack,
+    wait_for_system_ready,
+)
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(600)
 def test_init(shell):
     # Let the first Supervisor start finish before restarting it for tests.
     wait_for_container(shell, "mcos_supervisor")
@@ -18,26 +24,8 @@ def test_init(shell):
     # Disable auto-updates to avoid interference with other tests.
     disable_supervisor_autoupdate(shell)
 
-    def check_container_running(container_name):
-        out = shell.run_check(
-            f"docker container inspect -f '{{{{.State.Status}}}}' {container_name} || true"
-        )
-        return "running" in out
-
-    # wait for important containers first
-    while True:
-        if check_container_running("muthurcommand") and check_container_running("mcos_supervisor"):
-            break
-
-        sleep(1)
-
-    # wait for system ready
-    while True:
-        output = "\n".join(shell.run_check("mc os info || true"))
-        if "System is not ready" not in output and "connection refused" not in output:
-            break
-
-        sleep(1)
+    wait_for_mc_stack(shell)
+    wait_for_system_ready(shell)
 
     output = shell.run_check("mc os info")
     _LOGGER.info("%s", "\n".join(output))
@@ -76,7 +64,7 @@ def test_supervisor_logs(shell):
 
 @pytest.mark.dependency(depends=["test_init"])
 def test_landing_page(shell):
-    web_index = shell.run_check("curl http://localhost:8123")
+    web_index = curl_mc_fd_web(shell)
     assert "</html>" in " ".join(web_index)
 
 

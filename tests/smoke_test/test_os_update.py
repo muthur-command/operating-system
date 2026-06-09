@@ -4,29 +4,16 @@ from time import sleep
 
 import pytest
 
-from conftest import wait_for_container
+from conftest import wait_for_container, wait_for_mc_stack, wait_for_system_ready
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(600)
 def test_init(shell, shell_json):
     wait_for_container(shell, "mcos_supervisor")
-    wait_for_container(shell, "muthurcommand")
-
-    def check_container_running(container_name):
-        out = shell.run_check(
-            f"docker container inspect -f '{{{{.State.Status}}}}' {container_name} || true"
-        )
-        return "running" in out
-
-    # wait for important containers first
-    while True:
-        if check_container_running("muthurcommand") and check_container_running("mcos_supervisor"):
-            break
-
-        sleep(1)
+    wait_for_mc_stack(shell)
 
     # wait for the system ready and Supervisor at the latest version
     while True:

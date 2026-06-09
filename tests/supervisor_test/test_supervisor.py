@@ -4,7 +4,12 @@ from time import sleep
 import pytest
 from labgrid.driver import ExecutionError
 
-from conftest import disable_supervisor_autoupdate, wait_for_container
+from conftest import (
+    disable_supervisor_autoupdate,
+    wait_for_container,
+    wait_for_mc_stack,
+    wait_for_system_ready,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -18,20 +23,13 @@ def stash() -> dict:
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(360)
+@pytest.mark.timeout(600)
 def test_start_supervisor(shell, shell_json):
     wait_for_container(shell, "mcos_supervisor")
     disable_supervisor_autoupdate(shell)
 
-    def check_container_running(container_name):
-        out = shell.run_check(f"docker container inspect -f '{{{{.State.Status}}}}' {container_name} || true")
-        return "running" in out
-
-    while True:
-        if check_container_running("muthurcommand") and check_container_running("mcos_supervisor"):
-            break
-
-        sleep(1)
+    wait_for_mc_stack(shell)
+    wait_for_system_ready(shell)
 
     supervisor_ip = "\n".join(
         shell.run_check("docker inspect --format='{{.NetworkSettings.Networks.bridge.IPAddress}}' mcos_supervisor")
@@ -45,34 +43,6 @@ def test_start_supervisor(shell, shell_json):
             pass  # avoid failure when the container is restarting
 
         sleep(1)
-
-
-    logger.info("Waiting for Muthur Command core stack to be installed and started...")
-    core_install_started = False
-    while True:
-        try:
-            jobs_info = shell_json("mc jobs info --no-progress --raw-json")
-            if jobs_info.get("result") != "ok":
-                sleep(5)
-                continue
-            jobs = jobs_info.get("data", {}).get("jobs", [])
-            core_installing = any(
-                j.get("name") == "mcos_core_install" and not j.get("done")
-                for j in jobs
-            )
-            if core_installing:
-                # install is in progress
-                if not core_install_started:
-                    logger.info("Core install job detected, waiting for completion...")
-                    core_install_started = True
-            elif core_install_started:
-                # started and not installing anymore means finished
-                logger.info("Core install/start complete")
-                break
-        except ExecutionError:
-            pass  # avoid failure when the supervisor/CLI is restarting
-
-        sleep(5)
 
 
 @pytest.mark.dependency(depends=["test_start_supervisor"])
