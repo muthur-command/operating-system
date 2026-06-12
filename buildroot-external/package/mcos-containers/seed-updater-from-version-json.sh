@@ -27,6 +27,7 @@ jq --arg channel "${channel}" '
     multicast: .multicast,
     mc_bd: .mc_bd,
     mc_fd: .mc_fd,
+    landingpage: .landingpage,
     postgresql: .postgresql,
     redis: .redis,
     mcos_upgrade: .mcos_upgrade,
