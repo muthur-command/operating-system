@@ -18,7 +18,7 @@ else ifeq ($(BR2_PACKAGE_MCOS_CONTAINERS_CHANNEL_DEV),y)
 MCOS_CONTAINERS_VERSION_CHANNEL = dev
 endif
 
-MCOS_CONTAINERS_CONTAINER_IMAGES_ARCH = supervisor dns audio cli multicast observer mc_bd
+MCOS_CONTAINERS_CONTAINER_IMAGES_ARCH = supervisor dns audio cli multicast observer mc_bd landingpage
 MCOS_CONTAINERS_CONTAINER_IMAGES_NOARCH = mc_fd postgresql redis
 
 define MCOS_CONTAINERS_CONFIGURE_CMDS
