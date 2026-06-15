@@ -1,4 +1,5 @@
 import logging
+import os
 from time import sleep
 
 import pytest
@@ -6,8 +7,10 @@ import pytest
 from conftest import (
     curl_mc_fd_web,
     disable_supervisor_autoupdate,
+    expect_boot_slot,
     wait_for_container,
     wait_for_mc_stack,
+    wait_for_mc_fd_web,
     wait_for_system_ready,
 )
 
@@ -16,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(int(os.environ.get("INIT_TEST_TIMEOUT", "7200" if os.environ.get("NO_KVM") else "600")))
 def test_init(shell):
     # Let the first Supervisor start finish before restarting it for tests.
     wait_for_container(shell, "mcos_supervisor")
@@ -26,6 +29,7 @@ def test_init(shell):
 
     wait_for_mc_stack(shell)
     wait_for_system_ready(shell)
+    wait_for_mc_fd_web(shell)
 
     output = shell.run_check("mc os info")
     _LOGGER.info("%s", "\n".join(output))
@@ -108,26 +112,22 @@ def test_mcos_connectivity(shell):
 
 
 @pytest.mark.dependency(depends=["test_init"])
+@pytest.mark.timeout(int(os.environ.get("REBOOT_TEST_TIMEOUT", "1200" if os.environ.get("NO_KVM") else "300")))
 def test_custom_swap_size(shell, target):
     output = shell.run_check("stat -c '%s' /mnt/data/swapfile")
     # set new swap size to half of the previous size - round to 4k blocks
     new_swap_size = (int(output[0]) // 2 // 4096) * 4096
     shell.console.sendline(f"echo 'SWAPSIZE={new_swap_size/1024/1024}M' > /etc/default/mcos-swapfile; reboot")
-    shell.console.expect("Booting `Slot ", timeout=60)
-    # reactivate ShellDriver to handle login again
-    target.deactivate(shell)
-    target.activate(shell)
+    expect_boot_slot(shell, target)
     output = shell.run_check("stat -c '%s' /mnt/data/swapfile")
     assert int(output[0]) == new_swap_size, f"Incorrect swap size {new_swap_size}B: {output}"
 
 
 @pytest.mark.dependency(depends=["test_custom_swap_size"])
+@pytest.mark.timeout(int(os.environ.get("REBOOT_TEST_TIMEOUT", "1200" if os.environ.get("NO_KVM") else "300")))
 def test_no_swap(shell, target):
     shell.console.sendline("echo 'SWAPSIZE=0' > /etc/default/mcos-swapfile; reboot")
-    shell.console.expect("Booting `Slot ", timeout=60)
-    # reactivate ShellDriver to handle login again
-    target.deactivate(shell)
-    target.activate(shell)
+    expect_boot_slot(shell, target)
     output = shell.run_check("systemctl --no-pager -l list-units --state=failed")
     assert "0 loaded units listed." in output, f"Some units failed:\n{"\n".join(output)}"
     swapon = shell.run_check("swapon --show")

@@ -45,6 +45,8 @@ class QEMUShellStrategy(Strategy):
             self.qemu.extra_args = self.qemu.extra_args.replace(
                 "-accel kvm", ""
             ).strip()
+            # Docker stack needs more RAM when emulation is slow.
+            self.qemu.memory = "2G"
 
     @step(args=["status"])
     def transition(self, status, *, step):  # pylint: disable=redefined-outer-name

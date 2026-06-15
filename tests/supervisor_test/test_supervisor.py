@@ -5,6 +5,7 @@ import pytest
 from labgrid.driver import ExecutionError
 
 from conftest import (
+    _INIT_MODULE_TIMEOUT,
     disable_supervisor_autoupdate,
     wait_for_container,
     wait_for_mc_stack,
@@ -23,7 +24,7 @@ def stash() -> dict:
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(_INIT_MODULE_TIMEOUT)
 def test_start_supervisor(shell, shell_json):
     wait_for_container(shell, "mcos_supervisor")
     disable_supervisor_autoupdate(shell)
@@ -135,6 +136,10 @@ def test_supervisor_errors(shell_json):
     assert len(unhealthy) == 0, "Supervisor is unhealthy"
     # check for unsupported entries
     unsupported = resolution_info.get("data").get("unsupported")
+    # generic-x86-64 dev images run under QEMU; OVA images are used in CI instead.
+    os_board = shell_json("mc os info --no-progress --raw-json").get("data", {}).get("board")
+    if os_board == "generic-x86-64":
+        unsupported = [entry for entry in unsupported if entry != "virtualization_image"]
     assert len(unsupported) == 0, "Unsupported entries found"
 
 

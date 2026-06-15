@@ -5,9 +5,11 @@ import pytest
 from labgrid.driver import ExecutionError
 
 from conftest import (
+    _INIT_MODULE_TIMEOUT,
     curl_mc_fd_web,
     wait_for_container,
     wait_for_mc_stack,
+    wait_for_mc_fd_web,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,7 +35,7 @@ def _check_connectivity(shell, *, connected):
         raise AssertionError(f"expecting connected but all targets are down")
 
 
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(_INIT_MODULE_TIMEOUT)
 @pytest.mark.usefixtures("without_internet")
 def test_ha_runs_offline(shell):
     def check_container_running(container_name):
@@ -61,6 +63,7 @@ def test_ha_runs_offline(shell):
     _check_connectivity(shell, connected=False)
 
     wait_for_mc_stack(shell)
+    wait_for_mc_fd_web(shell)
 
     web_index = curl_mc_fd_web(shell)
     assert "</html>" in " ".join(web_index)

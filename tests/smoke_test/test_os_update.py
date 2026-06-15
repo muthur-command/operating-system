@@ -1,19 +1,30 @@
 import json
 import logging
+import os
 from time import sleep
 
 import pytest
 
-from conftest import wait_for_container, wait_for_mc_stack, wait_for_system_ready
+from conftest import (
+    _INIT_MODULE_TIMEOUT,
+    disable_supervisor_autoupdate,
+    expect_boot_slot,
+    wait_for_container,
+    wait_for_mc_stack,
+    wait_for_mc_fd_web,
+    wait_for_system_ready,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.dependency()
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(_INIT_MODULE_TIMEOUT)
 def test_init(shell, shell_json):
     wait_for_container(shell, "mcos_supervisor")
+    disable_supervisor_autoupdate(shell)
     wait_for_mc_stack(shell)
+    wait_for_mc_fd_web(shell)
 
     # wait for the system ready and Supervisor at the latest version
     while True:
@@ -31,7 +42,7 @@ def test_init(shell, shell_json):
 
 
 @pytest.mark.dependency(depends=["test_init"])
-@pytest.mark.timeout(600)  # TODO: reduce to 300 after 17.0 release
+@pytest.mark.timeout(int(os.environ.get("OS_UPDATE_TEST_TIMEOUT", "7200" if os.environ.get("NO_KVM") else "600")))
 def test_os_update(shell, shell_json, target):
     def check_container_running(container_name):
         out = shell.run_check(
@@ -56,11 +67,7 @@ def test_os_update(shell, shell_json, target):
 
         sleep(5)
 
-    shell.console.expect("Booting `Slot ", timeout=60)
-
-    # reactivate ShellDriver to handle login again
-    target.deactivate(shell)
-    target.activate(shell)
+    expect_boot_slot(shell, target)
 
     # temporary needed for OS 17.0 -> 16.x path, where all containers must be re-downloaded
     while True:
@@ -83,7 +90,7 @@ def test_os_update(shell, shell_json, target):
 
 
 @pytest.mark.dependency(depends=["test_os_update"])
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(int(os.environ.get("BOOT_SLOT_TEST_TIMEOUT", "900" if os.environ.get("NO_KVM") else "180")))
 def test_boot_other_slot(shell, shell_json, target):
     # switch to the other slot
     os_info = shell_json("mc os info --no-progress --raw-json")
@@ -93,11 +100,7 @@ def test_boot_other_slot(shell, shell_json, target):
     # use plain sendline instead of the run_check method
     shell.console.sendline(f"mc os boot-slot other --no-progress || true")
 
-    shell.console.expect("Booting `Slot ", timeout=60)
-
-    # reactivate ShellDriver to handle login again
-    target.deactivate(shell)
-    target.activate(shell)
+    expect_boot_slot(shell, target)
 
     # wait for the system to be ready after switching slots
     while True:
