@@ -1,0 +1,155 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Tue, 24 Jun 2026 19:00:00 +0800
+Subject: [PATCH] rk3576-opp-pll-6.18-compat
+
+Linux 6.18 OPP core renamed opp_table->rate_clk_single to
+current_rate_single_clk. The BSP OPP driver also needs Rockchip PLL adaptive
+scaling helpers that exist in vendor clk-pll.c but not in mainline.
+
+---
+ drivers/clk/rockchip/clk-pll.c             | 78 +++++++++++++++++++++-
+ drivers/clk/rockchip/clk.h                 |  4 ++
+ drivers/soc/rockchip/rockchip_opp_select.c |  4 +-
+ 3 files changed, 83 insertions(+), 3 deletions(-)
+
+--- a/drivers/clk/rockchip/clk-pll.c
++++ b/drivers/clk/rockchip/clk-pll.c
+@@ -38,6 +38,8 @@
+ 	u8			flags;
+ 	const struct rockchip_pll_rate_table *rate_table;
+ 	unsigned int		rate_count;
++	int			sel;
++	unsigned long		scaling;
+ 	spinlock_t		*lock;
+ 
+ 	struct rockchip_clk_provider *ctx;
+@@ -47,6 +49,72 @@
+ #define to_rockchip_clk_pll_nb(nb) \
+ 			container_of(nb, struct rockchip_clk_pll, clk_nb)
+ 
++int rockchip_pll_clk_adaptive_scaling(struct clk *clk, int sel)
++{
++	struct clk *parent = clk_get_parent(clk);
++	struct rockchip_clk_pll *pll;
++
++	if (IS_ERR_OR_NULL(parent))
++		return -EINVAL;
++
++	pll = to_rockchip_clk_pll(__clk_get_hw(parent));
++	if (!pll)
++		return -EINVAL;
++
++	pll->sel = sel;
++
++	return 0;
++}
++EXPORT_SYMBOL(rockchip_pll_clk_adaptive_scaling);
++
++int rockchip_pll_clk_rate_to_scale(struct clk *clk, unsigned long rate)
++{
++	const struct rockchip_pll_rate_table *rate_table;
++	struct clk *parent = clk_get_parent(clk);
++	struct rockchip_clk_pll *pll;
++	unsigned int i;
++
++	if (IS_ERR_OR_NULL(parent))
++		return -EINVAL;
++
++	pll = to_rockchip_clk_pll(__clk_get_hw(parent));
++	if (!pll)
++		return -EINVAL;
++
++	rate_table = pll->rate_table;
++	for (i = 0; i < pll->rate_count; i++) {
++		if (rate >= rate_table[i].rate)
++			return i;
++	}
++
++	return -EINVAL;
++}
++EXPORT_SYMBOL(rockchip_pll_clk_rate_to_scale);
++
++int rockchip_pll_clk_scale_to_rate(struct clk *clk, unsigned int scale)
++{
++	const struct rockchip_pll_rate_table *rate_table;
++	struct clk *parent = clk_get_parent(clk);
++	struct rockchip_clk_pll *pll;
++	unsigned int i;
++
++	if (IS_ERR_OR_NULL(parent))
++		return -EINVAL;
++
++	pll = to_rockchip_clk_pll(__clk_get_hw(parent));
++	if (!pll)
++		return -EINVAL;
++
++	rate_table = pll->rate_table;
++	for (i = 0; i < pll->rate_count; i++) {
++		if (i == scale)
++			return rate_table[i].rate;
++	}
++
++	return -EINVAL;
++}
++EXPORT_SYMBOL(rockchip_pll_clk_scale_to_rate);
++
+ static const struct rockchip_pll_rate_table *rockchip_get_pll_settings(
+ 			    struct rockchip_clk_pll *pll, unsigned long rate)
+ {
+@@ -54,9 +122,16 @@
+ 	int i;
+ 
+ 	for (i = 0; i < pll->rate_count; i++) {
+-		if (rate == rate_table[i].rate)
++		if (rate == rate_table[i].rate) {
++			if (i < pll->sel) {
++				pll->scaling = rate;
++				return &rate_table[pll->sel];
++			}
++			pll->scaling = 0;
+ 			return &rate_table[i];
++		}
+ 	}
++	pll->scaling = 0;
+ 
+ 	return NULL;
+ }
+@@ -906,6 +981,9 @@
+ 	struct rockchip_pll_rate_table cur;
+ 	u64 rate64 = prate, postdiv;
+ 
++	if (pll->sel && pll->scaling)
++		return pll->scaling;
++
+ 	rockchip_rk3588_pll_get_params(pll, &cur);
+ 
+ 	rate64 *= cur.m;
+--- a/drivers/clk/rockchip/clk.h
++++ b/drivers/clk/rockchip/clk.h
+@@ -1251,4 +1251,8 @@
+ void rk3576_rst_init(struct device_node *np, void __iomem *reg_base);
+ void rk3588_rst_init(struct device_node *np, void __iomem *reg_base);
+ 
++int rockchip_pll_clk_adaptive_scaling(struct clk *clk, int sel);
++int rockchip_pll_clk_rate_to_scale(struct clk *clk, unsigned long rate);
++int rockchip_pll_clk_scale_to_rate(struct clk *clk, unsigned int scale);
++
+ #endif
+--- a/drivers/soc/rockchip/rockchip_opp_select.c
++++ b/drivers/soc/rockchip/rockchip_opp_select.c
+@@ -2363,12 +2363,12 @@
+ 		return ret;
+ 	}
+ 
+-	dev_dbg(dev, "%lu -> %lu (Hz)\n", opp_table->rate_clk_single, *target);
++	dev_dbg(dev, "%lu -> %lu (Hz)\n", opp_table->current_rate_single_clk, *target);
+ 	ret = clk_set_rate(opp_table->clk, *target);
+ 	if (ret)
+ 		dev_err(dev, "failed to set clock rate: %lu\n", *target);
+ 	else
+-		opp_table->rate_clk_single = *target;
++		opp_table->current_rate_single_clk = *target;
+ 
+ 	clk_bulk_disable_unprepare(info->nclocks, info->clocks);
+ 

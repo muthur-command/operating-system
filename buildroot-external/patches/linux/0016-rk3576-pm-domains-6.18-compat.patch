@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Tue, 24 Jun 2026 14:00:00 +0800
+Subject: [PATCH] rk3576-pm-domains-6.18-compat
+
+Linux 6.18 renamed several Rockchip power-domain binding headers to use the
+vendor,model form (e.g. rockchip,rk3576-power.h). rk1808-power.h was never
+upstreamed; add it for the BSP pm_domains driver.
+
+---
+ drivers/soc/rockchip/pm_domains.c        | 8 +++++++-
+ include/dt-bindings/power/rk1808-power.h | 20 ++++++++++++++++++++
+ 2 files changed, 27 insertions(+), 1 deletion(-)
+ create mode 100644 include/dt-bindings/power/rk1808-power.h
+
+--- a/drivers/soc/rockchip/pm_domains.c
++++ b/drivers/soc/rockchip/pm_domains.c
+@@ -15,6 +15,8 @@
+ #include <linux/of_address.h>
+ #include <linux/of_clk.h>
+ #include <linux/of_platform.h>
++#include <linux/platform_device.h>
++#include <linux/of_device.h>
+ #include <linux/clk.h>
+ #include <linux/regmap.h>
+ #include <linux/slab.h>
+@@ -40,7 +42,7 @@
+ #include <dt-bindings/power/rk3399-power.h>
+-#include <dt-bindings/power/rk3528-power.h>
+-#include <dt-bindings/power/rk3562-power.h>
++#include <dt-bindings/power/rockchip,rk3528-power.h>
++#include <dt-bindings/power/rockchip,rk3562-power.h>
+ #include <dt-bindings/power/rk3568-power.h>
+-#include <dt-bindings/power/rk3576-power.h>
++#include <dt-bindings/power/rockchip,rk3576-power.h>
+ #include <dt-bindings/power/rk3588-power.h>
+ 
+--- a/include/dt-bindings/power/rk1808-power.h
++++ b/include/dt-bindings/power/rk1808-power.h
+@@ -0,0 +1,20 @@
++/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
++#ifndef __DT_BINDINGS_POWER_RK1808_POWER_H__
++#define __DT_BINDINGS_POWER_RK1808_POWER_H__
++
++/* VD_CORE */
++#define RK1808_PD_A35_0	0
++#define RK1808_PD_A35_1	1
++#define RK1808_PD_SCU	2
++#define RK1808_VD_CORE	3
++
++/* VD_NPU */
++#define RK1808_VD_NPU	4
++
++/* VD_LOGIC */
++#define RK1808_PD_DDR	5
++#define RK1808_PD_PCIE	6
++#define RK1808_PD_VPU	7
++#define RK1808_PD_VIO	8
++
++#endif /* __DT_BINDINGS_POWER_RK1808_POWER_H__ */

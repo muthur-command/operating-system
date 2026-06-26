@@ -1,0 +1,154 @@
+################################################################################
+#
+# SKWIFI (Seekwave WiFi/BT) Driver Patches for Mainline Kernel
+#
+# This directory contains patches to add SKW (Seekwave) WiFi/BT driver
+# support to the mainline Linux kernel.
+#
+# Driver Source: SDK kernel-6.1 drivers/net/wireless/rockchip_wlan/skwifi/
+#                SDK kernel-6.1 drivers/misc/seekwaveplatform_v20/
+#
+################################################################################
+
+# Patch Description:
+# -----------------
+# These patches add support for Seekwave SV6160/SWT6652 WiFi/BT modules
+# to the mainline Linux kernel. The driver provides cfg80211 interface
+# for WiFi operations and Bluetooth HCI support via SDIO interface.
+#
+# Supported Features:
+# ------------------
+# - IEEE 802.11 b/g/n/ac WiFi
+# - Bluetooth 5.0 (BR/EDR/LE)
+# - SDIO interface (primary)
+# - USB interface (optional)
+# - PCIe interface (optional)
+# - cfg80211 interface
+# - AP/STA modes
+#
+# Files to be added:
+# ------------------
+# drivers/net/wireless/rockchip_wlan/skwifi/
+#   - Kconfig
+#   - Makefile
+#   - skw_cfg80211.c/h
+#   - skw_core.c/h
+#   - skw_tx.c/h
+#   - skw_rx.c/h
+#   - skw_util.c
+#   - skw_regd.c/h
+#   - skw_mlme.c
+#   - skw_iface.c/h
+#   - skw_config.c
+#   - skw_iw.c/h
+#   - skw_recovery.c/h
+#   - skw_work.c/h
+#   - skw_timer.h
+#   - skw_msg.h
+#   - skw_tdls.c/h
+#   - skw_calib.c/h
+#   - skw_vendor.c/h
+#   - skw_mbssid.h
+#   - skw_dentry.c
+#   - skw_compat.h (for kernel version compatibility)
+#   - version.h
+#   - trace.c
+#
+# drivers/misc/seekwaveplatform_v20/
+#   - Kconfig
+#   - Makefile
+#   - skwutil/
+#   - sdio/
+#   - usb/
+#   - pcie/
+#
+# Kernel Configuration:
+# ---------------------
+# Add to kernel config:
+#   CONFIG_SKWIFI=m
+#   CONFIG_SKWIFI_SDIO=m
+#   CONFIG_SKWIFI_USB=y
+#   CONFIG_SKWIFI_PCIE=n
+#   CONFIG_CFG80211=m
+#   CONFIG_MAC80211=m
+#   CONFIG_WIRELESS=y
+#
+# Device Tree Requirements:
+# -------------------------
+# The device tree must include:
+#   - SDIO node for WiFi interface
+#   - mmc-pwrseq-simple node for power sequencing
+#   - seekwave,sv6160 node for module configuration
+#
+# Example device tree snippet:
+#   &sdio {
+#       mmc-pwrseq = <&sdio_pwrseq>;
+#       status = "okay";
+#   };
+#
+#   &{/} {
+#       sdio_pwrseq: sdio-pwrseq {
+#           compatible = "mmc-pwrseq-simple";
+#           reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
+#           post-power-on-delay-ms = <200>;
+#       };
+#
+#       seekwcn_boot: seekwcn-boot {
+#           compatible = "seekwave,sv6160";
+#           dma_type = <1>;
+#       };
+#   };
+#
+# Firmware Requirements:
+# ---------------------
+# The following firmware files are required:
+#   /lib/firmware/seekwave/SKW_WIFI_BOOT.bin
+#   /lib/firmware/seekwave/SKW_WIFI_MISSION.bin
+#   /lib/firmware/seekwave/SKW_WIFI_FUS.bin
+#   /lib/firmware/seekwave/SKW_BT.bin
+#
+# Note: These firmware files are typically provided by Seekwave and are
+# not included in the mainline kernel. They must be obtained from the
+# SDK or Seekwave directly.
+#
+# Build Instructions:
+# ------------------
+# 1. Apply patches to kernel source:
+#      patch -p1 < 0001-drivers-net-wireless-add-skwifi-support.patch
+#      patch -p1 < 0002-drivers-misc-add-seekwaveplatform-support.patch
+#
+# 2. Enable driver in kernel configuration:
+#      cd /path/to/kernel
+#      make ARCH=arm64 menuconfig
+#      # Navigate to: Device Drivers -> Network device support ->
+#      #              Wireless LAN -> Rockchip Wireless ->
+#      #              SKWIFI support (SDIO)
+#
+# 3. Build kernel and modules:
+#      make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image dtbs modules
+#
+# 4. Install modules:
+#      make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_install
+#
+# Troubleshooting:
+# ----------------
+# 1. Module fails to load:
+#    - Check firmware files are present in /lib/firmware/seekwave/
+#    - Verify SDIO interface is enabled in device tree
+#    - Check dmesg for loading errors
+#
+# 2. WiFi scan fails:
+#    - Ensure cfg80211 is built as module or builtin
+#    - Check regulatory domain settings
+#    - Verify antenna connection
+#
+# 3. Firmware download fails:
+#    - Check firmware files are correct version
+#    - Verify firmware checksums
+#
+# Compatibility:
+# -------------
+# Tested with: Linux 6.1 - 6.18
+# SoC: Rockchip RK3566, RK3568, RK3576
+#
+################################################################################

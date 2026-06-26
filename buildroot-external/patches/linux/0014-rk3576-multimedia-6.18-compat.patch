@@ -1,0 +1,1123 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Mon, 23 Jun 2026 16:00:00 +0800
+Subject: [PATCH] rk3576-multimedia-6.18-compat
+
+new file mode 100644
+index 000000000..9a2440700
+--- /dev/null
++++ b/include/uapi/linux/rk-mpp.h
+@@ -0,0 +1,82 @@
++/* SPDX-License-Identifier: ((GPL-2.0+ WITH Linux-syscall-note) OR MIT) */
++/*
++ * Rockchip mpp driver
++ * Copyright (C) 2023 Rockchip Electronics Co., Ltd.
++ */
++
++#ifndef _UAPI_RK_MPP_H
++#define _UAPI_RK_MPP_H
++
++#include <linux/types.h>
++
++/* Use 'v' as magic number */
++#define MPP_IOC_MAGIC			'v'
++
++#define MPP_IOC_CFG_V1			_IOW(MPP_IOC_MAGIC, 1, unsigned int)
++#define MPP_IOC_CFG_V2			_IOW(MPP_IOC_MAGIC, 2, unsigned int)
++
++/**
++ * Command type: keep the same as user space
++ */
++enum MPP_DEV_COMMAND_TYPE {
++	MPP_CMD_QUERY_BASE		= 0,
++	MPP_CMD_QUERY_HW_SUPPORT	= MPP_CMD_QUERY_BASE + 0,
++	MPP_CMD_QUERY_HW_ID		= MPP_CMD_QUERY_BASE + 1,
++	MPP_CMD_QUERY_CMD_SUPPORT	= MPP_CMD_QUERY_BASE + 2,
++	MPP_CMD_QUERY_BUTT,
++
++	MPP_CMD_INIT_BASE		= 0x100,
++	MPP_CMD_INIT_CLIENT_TYPE	= MPP_CMD_INIT_BASE + 0,
++	MPP_CMD_INIT_DRIVER_DATA	= MPP_CMD_INIT_BASE + 1,
++	MPP_CMD_INIT_TRANS_TABLE	= MPP_CMD_INIT_BASE + 2,
++	MPP_CMD_INIT_BUTT,
++
++	MPP_CMD_SEND_BASE		= 0x200,
++	MPP_CMD_SET_REG_WRITE		= MPP_CMD_SEND_BASE + 0,
++	MPP_CMD_SET_REG_READ		= MPP_CMD_SEND_BASE + 1,
++	MPP_CMD_SET_REG_ADDR_OFFSET	= MPP_CMD_SEND_BASE + 2,
++	MPP_CMD_SET_RCB_INFO		= MPP_CMD_SEND_BASE + 3,
++	MPP_CMD_SET_SESSION_FD		= MPP_CMD_SEND_BASE + 4,
++	MPP_CMD_SEND_BUTT,
++
++	MPP_CMD_POLL_BASE		= 0x300,
++	MPP_CMD_POLL_HW_FINISH		= MPP_CMD_POLL_BASE + 0,
++	MPP_CMD_POLL_HW_IRQ		= MPP_CMD_POLL_BASE + 1,
++	MPP_CMD_POLL_BUTT,
++
++	MPP_CMD_CONTROL_BASE		= 0x400,
++	MPP_CMD_RESET_SESSION		= MPP_CMD_CONTROL_BASE + 0,
++	MPP_CMD_TRANS_FD_TO_IOVA	= MPP_CMD_CONTROL_BASE + 1,
++	MPP_CMD_RELEASE_FD		= MPP_CMD_CONTROL_BASE + 2,
++	MPP_CMD_SEND_CODEC_INFO		= MPP_CMD_CONTROL_BASE + 3,
++	MPP_CMD_CONTROL_BUTT,
++
++	MPP_CMD_BUTT,
++};
++
++/* define flags for mpp_request */
++#define MPP_FLAGS_MULTI_MSG		(0x00000001)
++#define MPP_FLAGS_LAST_MSG		(0x00000002)
++#define MPP_FLAGS_REG_FD_NO_TRANS	(0x00000004)
++#define MPP_FLAGS_SCL_FD_NO_TRANS	(0x00000008)
++#define MPP_FLAGS_REG_NO_OFFSET		(0x00000010)
++#define MPP_FLAGS_SECURE_MODE		(0x00010000)
++
++/* data common struct for parse out */
++struct mpp_request {
++	__u32 cmd;
++	__u32 flags;
++	__u32 size;
++	__u32 offset;
++	void __user *data;
++};
++
++#define MPP_BAT_MSG_DONE		(0x00000001)
++
++struct mpp_bat_msg {
++	__u64 flag;
++	__u32 fd;
++	__s32 ret;
++};
++
++#endif /* _UAPI_RK_MPP_H */
+
+new file mode 100644
+index 000000000..f903364a4
+--- /dev/null
++++ b/include/linux/wakelock.h
+@@ -0,0 +1,48 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Android wakelock compatibility shim for upstream kernels.
++ */
++#ifndef _LINUX_WAKELOCK_H
++#define _LINUX_WAKELOCK_H
++
++#include <linux/pm_wakeup.h>
++
++#define WAKE_LOCK_SUSPEND	1
++
++struct wake_lock {
++	struct wakeup_source *ws;
++};
++
++static inline void wake_lock_init(struct wake_lock *lock, int type,
++				  const char *name)
++{
++	lock->ws = wakeup_source_register(NULL, name);
++}
++
++static inline void wake_lock_destroy(struct wake_lock *lock)
++{
++	if (lock->ws) {
++		wakeup_source_unregister(lock->ws);
++		lock->ws = NULL;
++	}
++}
++
++static inline void wake_lock(struct wake_lock *lock)
++{
++	if (lock->ws)
++		__pm_stay_awake(lock->ws);
++}
++
++static inline void wake_unlock(struct wake_lock *lock)
++{
++	if (lock->ws)
++		__pm_relax(lock->ws);
++}
++
++static inline void wake_lock_timeout(struct wake_lock *lock, unsigned long timeout)
++{
++	if (lock->ws)
++		__pm_wakeup_event(lock->ws, jiffies_to_msecs(timeout));
++}
++
++#endif /* _LINUX_WAKELOCK_H */
+
+new file mode 100644
+index 000000000..beaaf923f
+--- /dev/null
++++ b/include/linux/rockchip/cpu.h
+@@ -0,0 +1,272 @@
++/*
++ * Copyright (C) 2017 Rockchip Electronics Co. Ltd.
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of version 2 of the GNU General Public License as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
++ * more details.
++ */
++
++#ifndef __LINUX_ROCKCHIP_CPU_H
++#define __LINUX_ROCKCHIP_CPU_H
++
++#include <linux/of.h>
++
++#define ROCKCHIP_CPU_MASK		0xffff0000
++#define ROCKCHIP_CPU_SHIFT		16
++#define ROCKCHIP_CPU_PX30		0x33260000
++#define ROCKCHIP_CPU_RV1103		0x11030000
++#define ROCKCHIP_CPU_RV1106		0x11060000
++#define ROCKCHIP_CPU_RV1109		0x11090000
++#define ROCKCHIP_CPU_RV1126		0x11260000
++#define ROCKCHIP_CPU_RK312X		0x31260000
++#define ROCKCHIP_CPU_RK3288		0x32880000
++#define ROCKCHIP_CPU_RK3308		0x33080000
++#define ROCKCHIP_CPU_RK3528		0x35280000
++#define ROCKCHIP_CPU_RK3566		0x35660000
++#define ROCKCHIP_CPU_RK3567		0x35670000
++#define ROCKCHIP_CPU_RK3568		0x35680000
++
++#if IS_REACHABLE(CONFIG_ROCKCHIP_CPUINFO)
++
++extern unsigned long rockchip_soc_id;
++
++#define ROCKCHIP_CPU_VERION_MASK	0x0000f000
++#define ROCKCHIP_CPU_VERION_SHIFT	12
++
++static inline unsigned long rockchip_get_cpu_version(void)
++{
++	return (rockchip_soc_id & ROCKCHIP_CPU_VERION_MASK)
++		>> ROCKCHIP_CPU_VERION_SHIFT;
++}
++
++static inline void rockchip_set_cpu_version(unsigned long ver)
++{
++	rockchip_soc_id &= ~ROCKCHIP_CPU_VERION_MASK;
++	rockchip_soc_id |=
++		(ver << ROCKCHIP_CPU_VERION_SHIFT) & ROCKCHIP_CPU_VERION_MASK;
++}
++
++static inline void rockchip_set_cpu(unsigned long code)
++{
++	if (!code)
++		return;
++
++	rockchip_soc_id &= ~ROCKCHIP_CPU_MASK;
++	rockchip_soc_id |= (code << ROCKCHIP_CPU_SHIFT) & ROCKCHIP_CPU_MASK;
++}
++
++int rockchip_soc_id_init(void);
++
++#else
++
++#define rockchip_soc_id 0
++
++static inline unsigned long rockchip_get_cpu_version(void)
++{
++	return 0;
++}
++
++static inline void rockchip_set_cpu_version(unsigned long ver)
++{
++}
++
++static inline void rockchip_set_cpu(unsigned long code)
++{
++}
++
++static inline int rockchip_soc_id_init(void)
++{
++	return 0;
++}
++
++#endif
++
++#ifdef CONFIG_CPU_PX30
++static inline bool cpu_is_px30(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_PX30;
++	return of_machine_is_compatible("rockchip,px30") ||
++	       of_machine_is_compatible("rockchip,px30s") ||
++	       of_machine_is_compatible("rockchip,rk3326") ||
++	       of_machine_is_compatible("rockchip,rk3326s");
++}
++#else
++static inline bool cpu_is_px30(void) { return false; }
++#endif
++
++#if defined(CONFIG_CPU_RV1106)
++static inline bool cpu_is_rv1103(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RV1103;
++	return of_machine_is_compatible("rockchip,rv1103");
++}
++
++static inline bool cpu_is_rv1106(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RV1106;
++	return of_machine_is_compatible("rockchip,rv1106");
++}
++#else
++static inline bool cpu_is_rv1103(void) { return false; }
++static inline bool cpu_is_rv1106(void) { return false; }
++#endif
++
++#if defined(CONFIG_CPU_RV1126) || defined(CONFIG_CPU_RV1109)
++static inline bool cpu_is_rv1109(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RV1109;
++	return of_machine_is_compatible("rockchip,rv1109");
++}
++
++static inline bool cpu_is_rv1126(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RV1126;
++	return of_machine_is_compatible("rockchip,rv1126");
++}
++#else
++static inline bool cpu_is_rv1109(void) { return false; }
++static inline bool cpu_is_rv1126(void) { return false; }
++#endif
++
++#ifdef CONFIG_CPU_RK312X
++static inline bool cpu_is_rk312x(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK312X;
++	return of_machine_is_compatible("rockchip,rk3126") ||
++	       of_machine_is_compatible("rockchip,rk3126b") ||
++	       of_machine_is_compatible("rockchip,rk3126c") ||
++	       of_machine_is_compatible("rockchip,rk3128");
++}
++#else
++static inline bool cpu_is_rk312x(void) { return false; }
++#endif
++
++#ifdef CONFIG_CPU_RK3288
++static inline bool cpu_is_rk3288(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK3288;
++	return of_machine_is_compatible("rockchip,rk3288") ||
++	       of_machine_is_compatible("rockchip,rk3288w");
++}
++#else
++static inline bool cpu_is_rk3288(void) { return false; }
++#endif
++
++#ifdef CONFIG_CPU_RK3308
++static inline bool cpu_is_rk3308(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK3308;
++
++	return of_machine_is_compatible("rockchip,rk3308") ||
++	       of_machine_is_compatible("rockchip,rk3308bs");
++}
++#else
++static inline bool cpu_is_rk3308(void) { return false; }
++#endif
++
++#if defined(CONFIG_CPU_RK3528)
++static inline bool cpu_is_rk3528(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK3528;
++	return of_machine_is_compatible("rockchip,rk3528") ||
++	       of_machine_is_compatible("rockchip,rk3528a");
++}
++#else
++static inline bool cpu_is_rk3528(void) { return false; }
++#endif
++
++#if defined(CONFIG_CPU_RK3568)
++static inline bool cpu_is_rk3566(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK3566;
++	return of_machine_is_compatible("rockchip,rk3566");
++}
++
++static inline bool cpu_is_rk3567(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK3567;
++	return of_machine_is_compatible("rockchip,rk3567");
++}
++
++static inline bool cpu_is_rk3568(void)
++{
++	if (rockchip_soc_id)
++		return (rockchip_soc_id & ROCKCHIP_CPU_MASK) == ROCKCHIP_CPU_RK3568;
++	return of_machine_is_compatible("rockchip,rk3568");
++}
++#else
++static inline bool cpu_is_rk3566(void) { return false; }
++static inline bool cpu_is_rk3567(void) { return false; }
++static inline bool cpu_is_rk3568(void) { return false; }
++#endif
++
++#define ROCKCHIP_SOC_MASK	(ROCKCHIP_CPU_MASK | 0xff)
++#define ROCKCHIP_SOC_PX30	(ROCKCHIP_CPU_PX30 | 0x00)
++#define ROCKCHIP_SOC_PX30S	(ROCKCHIP_CPU_PX30 | 0x01)
++#define ROCKCHIP_SOC_RV1103     (ROCKCHIP_CPU_RV1103 | 0x00)
++#define ROCKCHIP_SOC_RV1106     (ROCKCHIP_CPU_RV1106 | 0x00)
++#define ROCKCHIP_SOC_RV1109     (ROCKCHIP_CPU_RV1109 | 0x00)
++#define ROCKCHIP_SOC_RV1126     (ROCKCHIP_CPU_RV1126 | 0x00)
++#define ROCKCHIP_SOC_RK3126     (ROCKCHIP_CPU_RK312X | 0x00)
++#define ROCKCHIP_SOC_RK3126B    (ROCKCHIP_CPU_RK312X | 0x10)
++#define ROCKCHIP_SOC_RK3126C    (ROCKCHIP_CPU_RK312X | 0x20)
++#define ROCKCHIP_SOC_RK3128     (ROCKCHIP_CPU_RK312X | 0x01)
++#define ROCKCHIP_SOC_RK3288     (ROCKCHIP_CPU_RK3288 | 0x00)
++#define ROCKCHIP_SOC_RK3288W    (ROCKCHIP_CPU_RK3288 | 0x01)
++#define ROCKCHIP_SOC_RK3308	(ROCKCHIP_CPU_RK3308 | 0x00)
++#define ROCKCHIP_SOC_RK3308B	(ROCKCHIP_CPU_RK3308 | 0x01)
++#define ROCKCHIP_SOC_RK3308BS	(ROCKCHIP_CPU_RK3308 | 0x02)
++#define ROCKCHIP_SOC_RK3528	(ROCKCHIP_CPU_RK3528 | 0x00)
++#define ROCKCHIP_SOC_RK3528A	(ROCKCHIP_CPU_RK3528 | 0x01)
++#define ROCKCHIP_SOC_RK3566	(ROCKCHIP_CPU_RK3566 | 0x00)
++#define ROCKCHIP_SOC_RK3567	(ROCKCHIP_CPU_RK3567 | 0x00)
++#define ROCKCHIP_SOC_RK3568	(ROCKCHIP_CPU_RK3568 | 0x00)
++
++#define ROCKCHIP_SOC(CPU, id, ID) \
++static inline bool soc_is_##id(void) \
++{ \
++	if (!IS_ENABLED(CONFIG_CPU_##CPU)) \
++		return false; \
++	if (rockchip_soc_id) \
++		return ((rockchip_soc_id & ROCKCHIP_SOC_MASK) == ROCKCHIP_SOC_ ##ID); \
++	return of_machine_is_compatible("rockchip,"#id); \
++}
++
++ROCKCHIP_SOC(PX30, px30, PX30)
++ROCKCHIP_SOC(PX30, px30s, PX30S)
++ROCKCHIP_SOC(RV1106, rv1103, RV1103)
++ROCKCHIP_SOC(RV1106, rv1106, RV1106)
++ROCKCHIP_SOC(RV1126, rv1109, RV1109)
++ROCKCHIP_SOC(RV1126, rv1126, RV1126)
++ROCKCHIP_SOC(RK312X, rk3126, RK3126)
++ROCKCHIP_SOC(RK312X, rk3126b, RK3126B)
++ROCKCHIP_SOC(RK312X, rk3126c, RK3126C)
++ROCKCHIP_SOC(RK312X, rk3128, RK3128)
++ROCKCHIP_SOC(RK3288, rk3288, RK3288)
++ROCKCHIP_SOC(RK3288, rk3288w, RK3288W)
++ROCKCHIP_SOC(RK3308, rk3308, RK3308)
++ROCKCHIP_SOC(RK3308, rk3308b, RK3308B)
++ROCKCHIP_SOC(RK3308, rk3308bs, RK3308BS)
++ROCKCHIP_SOC(RK3528, rk3528, RK3528)
++ROCKCHIP_SOC(RK3528, rk3528a, RK3528A)
++ROCKCHIP_SOC(RK3568, rk3566, RK3566)
++ROCKCHIP_SOC(RK3567, rk3567, RK3567)
++ROCKCHIP_SOC(RK3568, rk3568, RK3568)
++
++#endif
+
+--- a/drivers/video/rockchip/rga3/rga_drv.c
++++ b/drivers/video/rockchip/rga3/rga_drv.c
+@@ -5,6 +5,7 @@
+  * Author: Huang Lee <Putin.li@rock-chips.com>
+  */
+ 
++#include <linux/hrtimer.h>
+ #include "rga2_reg_info.h"
+ #include "rga3_reg_info.h"
+ #include "rga_dma_buf.h"
+@@ -351,9 +352,7 @@
+ static void rga_init_timer(void)
+ {
+ 	kt = ktime_set(0, RGA_TIMER_INTERVAL_NS);
+-	hrtimer_init(&timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+-
+-	timer.function = hrtimer_handler;
++	hrtimer_setup(&timer, hrtimer_handler, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+ 
+ 	hrtimer_start(&timer, kt, HRTIMER_MODE_REL);
+ }
+@@ -1425,14 +1424,13 @@
+ 	return ret;
+ }
+ 
+-static int rga_drv_remove(struct platform_device *pdev)
++static void rga_drv_remove(struct platform_device *pdev)
+ {
+ #ifndef RGA_DISABLE_PM
+ 	device_init_wakeup(&pdev->dev, false);
+ 	pm_runtime_disable(&pdev->dev);
+ #endif /* #ifndef RGA_DISABLE_PM */
+ 
+-	return 0;
+ }
+ 
+ static struct platform_driver rga3_driver = {
+@@ -1571,6 +1569,6 @@
+ MODULE_DESCRIPTION("Driver for rga device");
+ MODULE_LICENSE("GPL");
+ #ifdef MODULE_IMPORT_NS
+-MODULE_IMPORT_NS(DMA_BUF);
+-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
++MODULE_IMPORT_NS("DMA_BUF");
++MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
+ #endif
+
+--- a/drivers/video/rockchip/rga3/rga_iommu.c
++++ b/drivers/video/rockchip/rga3/rga_iommu.c
+@@ -168,9 +168,9 @@
+ 	 * size * channel_num * address_size
+ 	 */
+ 	order = get_order(size * 3 * sizeof(*mmu_base->buf_virtual));
+-	if (order >= MAX_ORDER) {
++	if (order >= MAX_PAGE_ORDER) {
+ 		pr_err("Can not alloc pages with order[%d] for mmu_page_table, max_order = %d\n",
+-		       order, MAX_ORDER);
++		       order, MAX_PAGE_ORDER);
+ 		goto err_free_mmu_base;
+ 	}
+ 
+@@ -182,9 +182,9 @@
+ 	mmu_base->buf_order = order;
+ 
+ 	order = get_order(size * sizeof(*mmu_base->pages));
+-	if (order >= MAX_ORDER) {
++	if (order >= MAX_PAGE_ORDER) {
+ 		pr_err("Can not alloc pages with order[%d] for mmu_base->pages, max_order = %d\n",
+-		       order, MAX_ORDER);
++		       order, MAX_PAGE_ORDER);
+ 		goto err_free_buf_virtual;
+ 	}
+ 
+
+--- a/drivers/video/rockchip/rga3/rga_mm.c
++++ b/drivers/video/rockchip/rga3/rga_mm.c
+@@ -256,9 +256,9 @@
+ 
+ 	/* alloc pages and page_table */
+ 	order = get_order(count * sizeof(struct page *));
+-	if (order >= MAX_ORDER) {
++	if (order >= MAX_PAGE_ORDER) {
+ 		rga_err("Can not alloc pages with order[%d] for viraddr pages, max_order = %d\n",
+-			order, MAX_ORDER);
++			order, MAX_PAGE_ORDER);
+ 		return -ENOMEM;
+ 	}
+ 
+@@ -1213,9 +1213,9 @@
+ 
+ 		if (job->flags & RGA_JOB_USE_HANDLE) {
+ 			order = get_order(page_count * sizeof(uint32_t *));
+-			if (order >= MAX_ORDER) {
++			if (order >= MAX_PAGE_ORDER) {
+ 				rga_job_err(job, "Can not alloc pages with order[%d] for page_table, max_order = %d\n",
+-					order, MAX_ORDER);
++					order, MAX_PAGE_ORDER);
+ 				return -ENOMEM;
+ 			}
+ 
+@@ -1278,9 +1278,9 @@
+ 
+ 		if (job->flags & RGA_JOB_USE_HANDLE) {
+ 			order = get_order(page_count * sizeof(uint32_t *));
+-			if (order >= MAX_ORDER) {
++			if (order >= MAX_PAGE_ORDER) {
+ 				rga_job_err(job, "Can not alloc pages with order[%d] for page_table, max_order = %d\n",
+-					order, MAX_ORDER);
++					order, MAX_PAGE_ORDER);
+ 				return -ENOMEM;
+ 			}
+ 
+
+--- a/drivers/video/rockchip/mpp/mpp_service.c
++++ b/drivers/video/rockchip/mpp/mpp_service.c
+@@ -399,7 +399,7 @@
+ 	atomic_set(&srv->shutdown_request, 0);
+ 	platform_set_drvdata(pdev, srv);
+ 
+-	srv->cls = class_create(THIS_MODULE, MPP_CLASS_NAME);
++	srv->cls = class_create(MPP_CLASS_NAME);
+ 	if (PTR_ERR_OR_ZERO(srv->cls))
+ 		return PTR_ERR(srv->cls);
+ 
+@@ -479,7 +479,7 @@
+ 	return ret;
+ }
+ 
+-static int mpp_service_remove(struct platform_device *pdev)
++static void mpp_service_remove(struct platform_device *pdev)
+ {
+ 	struct mpp_taskqueue *queue;
+ 	struct device *dev = &pdev->dev;
+@@ -505,8 +505,7 @@
+ 	class_destroy(srv->cls);
+ 	mpp_procfs_remove(srv);
+ 
+-	return 0;
+ }
+ 
+ static const struct of_device_id mpp_dt_ids[] = {
+ 	{
+@@ -526,7 +525,7 @@
+ 
+ module_platform_driver(mpp_service_driver);
+ 
+-MODULE_IMPORT_NS(DMA_BUF);
++MODULE_IMPORT_NS("DMA_BUF");
+ MODULE_LICENSE("Dual MIT/GPL");
+ MODULE_VERSION(MPP_VERSION);
+ MODULE_AUTHOR("Ding Wei leo.ding@rock-chips.com");
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc2.c
+@@ -2912,7 +2912,7 @@
+ 
+ 	if (enc->rcb_page) {
+ 		size_t page_size = PAGE_ALIGN(enc->sram_used - enc->sram_size);
+-		int order = min(get_order(page_size), MAX_ORDER);
++		int order = min(get_order(page_size), MAX_PAGE_ORDER);
+ 
+ 		__free_pages(enc->rcb_page, order);
+ 	}
+@@ -2924,7 +2924,7 @@
+ 	return 0;
+ }
+ 
+-static int rkvenc_remove(struct platform_device *pdev)
++static void rkvenc_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct device_node *np = dev->of_node;
+@@ -2955,8 +2955,7 @@
+ 		rkvenc_procfs_remove(mpp);
+ 	}
+ 
+-	return 0;
+ }
+ 
+ static void rkvenc_shutdown(struct platform_device *pdev)
+ {
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+@@ -1980,7 +1980,7 @@
+ 
+ 	if (dec->rcb_page) {
+ 		size_t page_size = PAGE_ALIGN(dec->rcb_size - dec->sram_size);
+-		int order = min(get_order(page_size), MAX_ORDER);
++		int order = min(get_order(page_size), MAX_PAGE_ORDER);
+ 
+ 		__free_pages(dec->rcb_page, order);
+ 	}
+@@ -1992,7 +1992,7 @@
+ 	return 0;
+ }
+ 
+-static int rkvdec2_remove(struct platform_device *pdev)
++static void rkvdec2_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 
+@@ -2014,8 +2014,7 @@
+ 		rkvdec2_link_remove(mpp, dec->link_dec);
+ 	}
+ 
+-	return 0;
+ }
+ 
+ static void rkvdec2_shutdown(struct platform_device *pdev)
+ {
+
+--- a/drivers/video/rockchip/mpp/mpp_vepu1.c
++++ b/drivers/video/rockchip/mpp/mpp_vepu1.c
+@@ -771,7 +771,7 @@
+ 	return 0;
+ }
+ 
+-static int vepu_remove(struct platform_device *pdev)
++static void vepu_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -780,8 +780,7 @@
+ 	mpp_dev_remove(mpp);
+ 	vepu_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_vepu1_driver = {
+ 	.probe = vepu_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_vepu2.c
++++ b/drivers/video/rockchip/mpp/mpp_vepu2.c
+@@ -1224,7 +1224,7 @@
+ 	return ret;
+ }
+ 
+-static int vepu_remove(struct platform_device *pdev)
++static void vepu_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct device_node *np = dev->of_node;
+@@ -1257,8 +1257,7 @@
+ 		vepu_procfs_remove(mpp);
+ 	}
+ 
+-	return 0;
+ }
+ 
+ static void vepu_shutdown(struct platform_device *pdev)
+ {
+
+--- a/drivers/video/rockchip/mpp/mpp_vdpu1.c
++++ b/drivers/video/rockchip/mpp/mpp_vdpu1.c
+@@ -948,7 +948,7 @@
+ 	return 0;
+ }
+ 
+-static int vdpu_remove(struct platform_device *pdev)
++static void vdpu_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -957,8 +957,7 @@
+ 	mpp_dev_remove(mpp);
+ 	vdpu_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_vdpu1_driver = {
+ 	.probe = vdpu_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_vdpu2.c
++++ b/drivers/video/rockchip/mpp/mpp_vdpu2.c
+@@ -784,7 +784,7 @@
+ 	return 0;
+ }
+ 
+-static int vdpu_remove(struct platform_device *pdev)
++static void vdpu_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -793,8 +793,7 @@
+ 	mpp_dev_remove(mpp);
+ 	vdpu_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_vdpu2_driver = {
+ 	.probe = vdpu_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_vdpp.c
++++ b/drivers/video/rockchip/mpp/mpp_vdpp.c
+@@ -803,7 +803,7 @@
+ 	return 0;
+ }
+ 
+-static int vdpp_remove(struct platform_device *pdev)
++static void vdpp_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = platform_get_drvdata(pdev);
+@@ -812,8 +812,7 @@
+ 	mpp_dev_remove(mpp);
+ 	vdpp_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_vdpp_driver = {
+ 	.probe = vdpp_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc.c
+@@ -1442,7 +1442,7 @@
+ 	return ret;
+ }
+ 
+-static int rkvenc_remove(struct platform_device *pdev)
++static void rkvenc_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -1451,8 +1451,7 @@
+ 	mpp_dev_remove(mpp);
+ 	rkvenc_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_rkvenc_driver = {
+ 	.probe = rkvenc_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec.c
+@@ -1903,7 +1903,7 @@
+ 	return 0;
+ }
+ 
+-static int rkvdec_remove(struct platform_device *pdev)
++static void rkvdec_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = platform_get_drvdata(pdev);
+@@ -1912,8 +1912,7 @@
+ 	mpp_dev_remove(mpp);
+ 	rkvdec_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_rkvdec_driver = {
+ 	.probe = rkvdec_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_jpgdec.c
++++ b/drivers/video/rockchip/mpp/mpp_jpgdec.c
+@@ -635,7 +635,7 @@
+ 	return 0;
+ }
+ 
+-static int jpgdec_remove(struct platform_device *pdev)
++static void jpgdec_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -644,8 +644,7 @@
+ 	mpp_dev_remove(mpp);
+ 	jpgdec_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_jpgdec_driver = {
+ 	.probe = jpgdec_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_jpgenc.c
++++ b/drivers/video/rockchip/mpp/mpp_jpgenc.c
+@@ -628,7 +628,7 @@
+ 	return 0;
+ }
+ 
+-static int jpgenc_remove(struct platform_device *pdev)
++static void jpgenc_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -636,8 +636,7 @@
+ 	dev_info(dev, "remove device\n");
+ 	mpp_dev_remove(mpp);
+ 	jpgenc_procfs_remove(mpp);
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_jpgenc_driver = {
+ 	.probe = jpgenc_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_iep2.c
++++ b/drivers/video/rockchip/mpp/mpp_iep2.c
+@@ -1107,7 +1107,7 @@
+ 	return 0;
+ }
+ 
+-static int iep2_remove(struct platform_device *pdev)
++static void iep2_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = dev_get_drvdata(dev);
+@@ -1119,8 +1119,7 @@
+ 	mpp_dev_remove(mpp);
+ 	iep2_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_iep2_driver = {
+ 	.probe = iep2_probe,
+
+--- a/drivers/video/rockchip/mpp/mpp_av1dec.c
++++ b/drivers/video/rockchip/mpp/mpp_av1dec.c
+@@ -1039,7 +1039,7 @@
+ 	return ret;
+ }
+ 
+-static int av1dec_remove(struct platform_device *pdev)
++static void av1dec_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct mpp_dev *mpp = platform_get_drvdata(pdev);
+@@ -1048,8 +1048,7 @@
+ 	mpp_dev_remove(mpp);
+ 	av1dec_procfs_remove(mpp);
+ 
+-	return 0;
+ }
+ 
+ struct platform_driver rockchip_av1dec_driver = {
+ 	.probe = av1dec_probe,
+
+--- a/drivers/video/rockchip/iep/iep_drv.c
++++ b/drivers/video/rockchip/iep/iep_drv.c
+@@ -1071,7 +1071,7 @@
+ 	return ret;
+ }
+ 
+-static int iep_drv_remove(struct platform_device *pdev)
++static void iep_drv_remove(struct platform_device *pdev)
+ {
+ 	struct iep_drvdata *data = platform_get_drvdata(pdev);
+ 
+@@ -1087,8 +1087,7 @@
+ 	pm_runtime_disable(data->dev);
+ #endif
+ 
+-	return 0;
+ }
+ 
+ #if defined(CONFIG_OF)
+ static const struct of_device_id iep_dt_ids[] = {
+@@ -1210,7 +1208,7 @@
+ MODULE_AUTHOR("ljf@rock-chips.com");
+ MODULE_DESCRIPTION("Driver for iep device");
+ MODULE_LICENSE("GPL");
+-MODULE_IMPORT_NS(DMA_BUF);
++MODULE_IMPORT_NS("DMA_BUF");
+ 
+ #ifdef IEP_TEST_CASE
+ 
+
+--- a/drivers/rknpu/rknpu_drv.c
++++ b/drivers/rknpu/rknpu_drv.c
+@@ -781,8 +781,8 @@
+ static void rknpu_init_timer(struct rknpu_device *rknpu_dev)
+ {
+ 	rknpu_dev->kt = ktime_set(0, RKNPU_LOAD_INTERVAL);
+-	hrtimer_init(&rknpu_dev->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+-	rknpu_dev->timer.function = hrtimer_handler;
++	hrtimer_setup(&rknpu_dev->timer, hrtimer_handler, CLOCK_MONOTONIC,
++		      HRTIMER_MODE_REL);
+ 	hrtimer_start(&rknpu_dev->timer, rknpu_dev->kt, HRTIMER_MODE_REL);
+ }
+ 
+@@ -1526,7 +1526,7 @@
+ 	return ret;
+ }
+ 
+-static int rknpu_remove(struct platform_device *pdev)
++static void rknpu_remove(struct platform_device *pdev)
+ {
+ 	struct rknpu_device *rknpu_dev = platform_get_drvdata(pdev);
+ 	int i = 0;
+@@ -1587,7 +1587,6 @@
+ 
+ 	pm_runtime_disable(&pdev->dev);
+ 
+-	return 0;
+ }
+ 
+ #ifndef FPGA_PLATFORM
+@@ -1660,5 +1659,5 @@
+ MODULE_VERSION(RKNPU_GET_DRV_VERSION_STRING(DRIVER_MAJOR, DRIVER_MINOR,
+ 					    DRIVER_PATCHLEVEL));
+ #if KERNEL_VERSION(5, 16, 0) < LINUX_VERSION_CODE
+-MODULE_IMPORT_NS(DMA_BUF);
++MODULE_IMPORT_NS("DMA_BUF");
+ #endif
+
+--- a/drivers/video/rockchip/rga3/rga_dma_buf.c
++++ b/drivers/video/rockchip/rga3/rga_dma_buf.c
+@@ -298,7 +298,7 @@
+ 	}
+ 
+ 	map_size = iommu_map_sg(domain, iova, sgt->sgl, sgt->orig_nents,
+-				rga_dma_info_to_prot(DMA_BIDIRECTIONAL));
++				rga_dma_info_to_prot(DMA_BIDIRECTIONAL), GFP_KERNEL);
+ 	if (map_size < align_size) {
+ 		rga_err("iommu can not map sgt to iova");
+ 		rga_iommu_dma_free_iova(domain, iova, align_size);
+@@ -343,7 +343,7 @@
+ 	}
+ 
+ 	ret = iommu_map(domain, iova, paddr, align_size,
+-			rga_dma_info_to_prot(DMA_BIDIRECTIONAL));
++			rga_dma_info_to_prot(DMA_BIDIRECTIONAL), GFP_KERNEL);
+ 	if (ret) {
+ 		rga_err("iommu can not map phys_addr to iova");
+ 		rga_iommu_dma_free_iova(domain, iova, align_size);
+
+--- a/drivers/video/rockchip/rga3/rga_mm.c
++++ b/drivers/video/rockchip/rga3/rga_mm.c
+@@ -132,10 +132,10 @@
+ #elif LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+ 	result = get_user_pages_remote(current, current_mm,
+ 				       Memory << PAGE_SHIFT,
+-				       pageCount, writeFlag ? FOLL_WRITE : 0, pages, NULL, NULL);
++				       pageCount, writeFlag ? FOLL_WRITE : 0, pages, NULL);
+ #else
+ 	result = get_user_pages_remote(current_mm, Memory << PAGE_SHIFT,
+-				       pageCount, writeFlag ? FOLL_WRITE : 0, pages, NULL, NULL);
++				       pageCount, writeFlag ? FOLL_WRITE : 0, pages, NULL);
+ #endif
+ 
+ 	if (result > 0 && result >= pageCount) {
+
+--- a/drivers/video/rockchip/mpp/mpp_iep2.c
++++ b/drivers/video/rockchip/mpp/mpp_iep2.c
+@@ -305,7 +305,7 @@
+ 			page_iova = round_down(page_iova, AUX_PAGE_SIZE);
+ 			ret = iommu_map(mpp->iommu_info->domain, page_iova,
+ 					page_to_phys(priv->aux_page), AUX_PAGE_SIZE,
+-					IOMMU_READ);
++					IOMMU_READ, GFP_KERNEL);
+ 			if (!ret) {
+ 				priv->aux_iova = page_iova;
+ 				mpp_debug(DEBUG_IOMMU, "aux iova %lx\n", page_iova);
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec.c
+@@ -1214,7 +1214,7 @@
+ 		page_iova = round_down(iova, IOMMU_PAGE_SIZE);
+ 		ret = iommu_map(mpp->iommu_info->domain, page_iova,
+ 				page_to_phys(dec->aux_page), IOMMU_PAGE_SIZE,
+-				IOMMU_READ | IOMMU_WRITE);
++				IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 		if (!ret)
+ 			dec->aux_iova = page_iova;
+ 	}
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc.c
+@@ -1103,7 +1103,7 @@
+ 	page_iova = round_down(enc->fault_iova, SZ_4K);
+ 	ret = iommu_map(mpp->iommu_info->domain, page_iova,
+ 			page_to_phys(enc->aux_page), IOMMU_PAGE_SIZE,
+-			IOMMU_READ | IOMMU_WRITE);
++			IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 	if (ret)
+ 		mpp_err("iommu_map iova %lx error.\n", page_iova);
+ 	else
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+@@ -1740,7 +1740,7 @@
+ 	sram_size = rcb_size < sram_size ? rcb_size : sram_size;
+ 	/* iova map to sram */
+ 	domain = dec->mpp.iommu_info->domain;
+-	ret = iommu_map(domain, iova, sram_start, sram_size, IOMMU_READ | IOMMU_WRITE);
++	ret = iommu_map(domain, iova, sram_start, sram_size, IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 	if (ret) {
+ 		dev_err(dev, "sram iommu_map error.\n");
+ 		return ret;
+@@ -1758,7 +1758,7 @@
+ 		}
+ 		/* iova map to dma */
+ 		ret = iommu_map(domain, iova + sram_size, page_to_phys(page),
+-				page_size, IOMMU_READ | IOMMU_WRITE);
++				page_size, IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 		if (ret) {
+ 			dev_err(dev, "page iommu_map error.\n");
+ 			__free_pages(page, get_order(page_size));
+
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc2.c
+@@ -2697,7 +2697,7 @@
+ 	sram_size = sram_used < sram_size ? sram_used : sram_size;
+ 	/* iova map to sram */
+ 	domain = enc->mpp.iommu_info->domain;
+-	ret = iommu_map(domain, iova, sram_start, sram_size, IOMMU_READ | IOMMU_WRITE);
++	ret = iommu_map(domain, iova, sram_start, sram_size, IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 	if (ret) {
+ 		dev_err(dev, "sram iommu_map error.\n");
+ 		return ret;
+@@ -2715,7 +2715,7 @@
+ 		}
+ 		/* iova map to dma */
+ 		ret = iommu_map(domain, iova + sram_size, page_to_phys(page),
+-				page_size, IOMMU_READ | IOMMU_WRITE);
++				page_size, IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 		if (ret) {
+ 			dev_err(dev, "page iommu_map error.\n");
+ 			__free_pages(page, get_order(page_size));
+
+--- a/drivers/rknpu/rknpu_iommu.c
++++ b/drivers/rknpu/rknpu_iommu.c
+@@ -274,7 +274,7 @@
+ 		goto out_restore_sg;
+ 	}
+ 
+-	ret = iommu_map_sg(domain, iova, sg, nents, prot);
++	ret = iommu_map_sg(domain, iova, sg, nents, prot, GFP_KERNEL);
+ 	if (ret < 0 || ret < iova_len) {
+ 		LOG_ERROR("failed to map SG: %zd\n", ret);
+ 		goto out_free_iova;
+
+--- a/drivers/rknpu/rknpu_gem.c
++++ b/drivers/rknpu/rknpu_gem.c
+@@ -448,7 +448,7 @@
+ 		cache_start = rknpu_dev->nbuf_start + s->offset;
+ 		size = length < s->length ? length : s->length;
+ 		ret = iommu_map(domain, iova_start, cache_start, size,
+-				IOMMU_READ | IOMMU_WRITE);
++				IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 		if (ret) {
+ 			LOG_ERROR("cache iommu_map error: %d\n", ret);
+ 			return ret;
+@@ -548,7 +548,7 @@
+ 	if (!rknpu_obj->cache_with_sgt)
+ 		ret = iommu_map(domain, rknpu_obj->iova_start,
+ 				cache_start + cache_offset, cache_size,
+-				IOMMU_READ | IOMMU_WRITE);
++				IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 	else
+ 		ret = rknpu_iommu_map_with_cache_sgt(domain, rknpu_dev,
+ 						     rknpu_obj, cache_size);
+@@ -594,7 +594,7 @@
+ 		size = (length < s->length) ? length : s->length;
+ 
+ 		ret = iommu_map(domain, offset, sg_phys(s), size,
+-				IOMMU_READ | IOMMU_WRITE);
++				IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+ 		if (ret) {
+ 			LOG_ERROR("ddr iommu_map error: %d\n", ret);
+ 			goto sgl_unmap;
+
+--- a/drivers/video/rockchip/mpp/mpp_common.c
++++ b/drivers/video/rockchip/mpp/mpp_common.c
+@@ -1555,4 +1555,4 @@
+ 		f = fdget(bat_msg.fd);
+-		if (!f.file) {
++		if (fd_empty(f)) {
+ 			int ret = -EBADF;
+ 
+@@ -1576,7 +1576,7 @@
+ 		/* switch session */
+-		session = f.file->private_data;
++		session = fd_file(f)->private_data;
+ 		msgs = get_task_msgs(session);
+ 
+-		if (f.file->private_data == session)
++		if (fd_file(f)->private_data == session)
+ 			msgs->ext_fd = bat_msg.fd;
+
+--- a/drivers/video/rockchip/mpp/mpp_iommu.c
++++ b/drivers/video/rockchip/mpp/mpp_iommu.c
+@@ -9,7 +9,7 @@
+  *
+  */
+ #include <linux/delay.h>
+-#include <linux/dma-buf-cache.h>
++#include <linux/dma-buf.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/iommu.h>
+ #include <linux/of.h>
+

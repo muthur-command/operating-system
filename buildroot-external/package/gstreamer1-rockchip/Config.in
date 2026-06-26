@@ -1,0 +1,18 @@
+config BR2_PACKAGE_GSTREAMER1_ROCKCHIP
+	bool "gstreamer1-rockchip"
+	select BR2_PACKAGE_GST1_PLUGINS_BASE
+	select BR2_PACKAGE_ROCKCHIP_MPP
+	help
+	  GStreamer plugins for Rockchip hardware acceleration.
+	  This package provides GStreamer elements for MPP-based
+	  video encoding/decoding and RGA-based image processing.
+
+	  https://github.com/rockchip-linux/gstreamer-rockchip
+
+config BR2_PREFER_ROCKCHIP_RGA
+	bool "Enable RGA plugin"
+	select BR2_PACKAGE_ROCKCHIP_RGA
+	default y
+	depends on BR2_PACKAGE_GSTREAMER1_ROCKCHIP
+	help
+	  Enable the RGA (Raster Graphic Acceleration) GStreamer plugin.

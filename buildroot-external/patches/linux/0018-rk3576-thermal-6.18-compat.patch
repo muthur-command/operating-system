@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Tue, 24 Jun 2026 17:00:00 +0800
+Subject: [PATCH] rk3576-thermal-6.18-compat
+
+Linux 6.18 made struct thermal_zone_device opaque. Replace direct member
+access in Rockchip PVTM and OPP drivers with thermal_zone_get_temp().
+
+---
+ drivers/soc/rockchip/rockchip_opp_select.c | 5 ++---
+ drivers/soc/rockchip/rockchip_pvtm.c       | 4 ++--
+ 2 files changed, 4 insertions(+), 5 deletions(-)
+
+--- a/drivers/soc/rockchip/rockchip_pvtm.c
++++ b/drivers/soc/rockchip/rockchip_pvtm.c
+@@ -96,8 +96,8 @@
+ 		return 0;
+ 	}
+ 
+-	if (pvtm->tz && pvtm->tz->ops && pvtm->tz->ops->get_temp) {
+-		ret = pvtm->tz->ops->get_temp(pvtm->tz, &cur_temp);
++	if (pvtm->tz) {
++		ret = thermal_zone_get_temp(pvtm->tz, &cur_temp);
+ 		if (ret)
+ 			dev_err(pvtm->dev, "debug failed to get temp\n");
+ 		else
+--- a/drivers/soc/rockchip/rockchip_opp_select.c
++++ b/drivers/soc/rockchip/rockchip_opp_select.c
+@@ -331,8 +331,6 @@
+ 	pvtm->tz = thermal_zone_get_zone_by_name(pvtm->tz_name);
+ 	if (IS_ERR(pvtm->tz))
+ 		return -EINVAL;
+-	if (!pvtm->tz->ops->get_temp)
+-		return -EINVAL;
+ 	if (of_property_read_bool(np, "rockchip,pvtm-pvtpll")) {
+ 		if (of_property_read_u32(np, "rockchip,pvtm-offset",
+ 					 &pvtm->offset))
+@@ -425,7 +423,7 @@
+ 	 * As pvtm is influenced by temperature, compute difference between
+ 	 * current temperature and reference temperature
+ 	 */
+-	pvtm->tz->ops->get_temp(pvtm->tz, &cur_temp);
++	thermal_zone_get_temp(pvtm->tz, &cur_temp);
+ 	diff_temp = (cur_temp / 1000 - pvtm->ref_temp);
+ 	diff_value = diff_temp *
+ 		(diff_temp < 0 ? pvtm->temp_prop[0] : pvtm->temp_prop[1]);
+@@ -1107,7 +1105,7 @@
+ 		dev_err(dev, "failed to get pvtm from 0x%x\n", pvtm->offset);
+ 		goto resetore_volt;
+ 	}
+-	pvtm->tz->ops->get_temp(pvtm->tz, &cur_temp);
++	thermal_zone_get_temp(pvtm->tz, &cur_temp);
+ 	diff_temp = (cur_temp / 1000 - pvtm->ref_temp);
+ 	if (diff_temp < 0)
+ 		prop_temp = pvtm->temp_prop[0];

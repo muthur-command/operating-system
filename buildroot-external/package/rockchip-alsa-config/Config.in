@@ -1,0 +1,13 @@
+config BR2_PACKAGE_ROCKCHIP_ALSA_CONFIG
+	bool "rockchip-alsa-config"
+	help
+	  ALSA configuration files for Rockchip boards.
+	  This package provides ALSA mixer configurations and
+	  audio routing settings for Rockchip SoCs.
+
+config BR2_ROCKCHIP_ALSA_CONFIG_INSTALL_INIT_SCRIPT
+	bool "Install init script"
+	default y
+	depends on BR2_PACKAGE_ROCKCHIP_ALSA_CONFIG
+	help
+	  Install the ALSA configuration init script.

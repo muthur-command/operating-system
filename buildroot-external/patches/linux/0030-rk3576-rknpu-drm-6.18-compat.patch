@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000030 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] drm: rknpu: Linux 6.18 drm_driver API compat
+
+Linux 6.18 removed gem_prime_mmap and date from struct drm_driver.
+GEM mmap is already handled via drm_gem_object_funcs.mmap since 6.1.
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/rknpu/rknpu_drv.c | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/drivers/rknpu/rknpu_drv.c b/drivers/rknpu/rknpu_drv.c
+index 1111111..2222222 100644
+--- a/drivers/rknpu/rknpu_drv.c
++++ b/drivers/rknpu/rknpu_drv.c
+@@ -726,17 +726,11 @@ static struct drm_driver rknpu_drm_driver = {
+ 	.gem_prime_import = drm_gem_prime_import,
+ #endif
+ 	.gem_prime_import_sg_table = rknpu_gem_prime_import_sg_table,
+-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+-	.gem_prime_mmap = drm_gem_prime_mmap,
+-#else
+-	.gem_prime_mmap = rknpu_gem_prime_mmap,
+-#endif
+ 	.ioctls = rknpu_ioctls,
+ 	.num_ioctls = ARRAY_SIZE(rknpu_ioctls),
+ 	.fops = &rknpu_drm_driver_fops,
+ 	.name = DRIVER_NAME,
+ 	.desc = DRIVER_DESC,
+-	.date = DRIVER_DATE,
+ 	.major = DRIVER_MAJOR,
+ 	.minor = DRIVER_MINOR,
+ 	.patchlevel = DRIVER_PATCHLEVEL,
+-- 
+2.34.1

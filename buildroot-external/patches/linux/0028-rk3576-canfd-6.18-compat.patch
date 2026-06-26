@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000028 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] net: can: rockchip: rk3576_canfd Linux 6.18 API compat
+
+Linux 6.18 moved CAN FD bittiming fields into struct can_priv.fd and
+changed devm_reset_control_array_get() to devm_reset_control_array_get_exclusive().
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/net/can/rockchip/rk3576_canfd.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/can/rockchip/rk3576_canfd.c b/drivers/net/can/rockchip/rk3576_canfd.c
+index 1111111..2222222 100644
+--- a/drivers/net/can/rockchip/rk3576_canfd.c
++++ b/drivers/net/can/rockchip/rk3576_canfd.c
+@@ -441,7 +441,7 @@ static int rk3576_canfd_set_bittiming(struct net_device *ndev)
+ {
+ 	struct rk3576_canfd *rcan = netdev_priv(ndev);
+ 	const struct can_bittiming *bt = &rcan->can.bittiming;
+-	const struct can_bittiming *dbt = &rcan->can.data_bittiming;
++	const struct can_bittiming *dbt = &rcan->can.fd.data_bittiming;
+ 	u16 brp, sjw, tseg1, tseg2;
+ 	u32 reg_btp;
+ 
+@@ -1215,7 +1215,7 @@ static int rk3576_canfd_probe(struct platform_device *pdev)
+ 		return err;
+ 	}
+ 
+-	rcan->reset = devm_reset_control_array_get(&pdev->dev, false, false);
++	rcan->reset = devm_reset_control_array_get_exclusive(&pdev->dev);
+ 	if (IS_ERR(rcan->reset)) {
+ 		if (PTR_ERR(rcan->reset) != -EPROBE_DEFER)
+ 			dev_err(&pdev->dev, "failed to get canfd reset lines\n");
+@@ -1233,11 +1233,11 @@ static int rk3576_canfd_probe(struct platform_device *pdev)
+ 	rcan->can.state = CAN_STATE_STOPPED;
+ 
+ 	rcan->can.bittiming_const = &rk3576_canfd_bittiming_const;
+-	rcan->can.data_bittiming_const = &rk3576_canfd_data_bittiming_const;
++	rcan->can.fd.data_bittiming_const = &rk3576_canfd_data_bittiming_const;
+ 	rcan->can.do_set_mode = rk3576_canfd_set_mode;
+ 	rcan->can.do_get_berr_counter = rk3576_canfd_get_berr_counter;
+ 	rcan->can.do_set_bittiming = rk3576_canfd_set_bittiming;
+-	rcan->can.do_set_data_bittiming = rk3576_canfd_set_bittiming;
++	rcan->can.fd.do_set_data_bittiming = rk3576_canfd_set_bittiming;
+ 	rcan->can.ctrlmode = CAN_CTRLMODE_FD;
+ 	/* IFI CANFD can do both Bosch FD and ISO FD */
+ 	rcan->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
+-- 
+2.34.1

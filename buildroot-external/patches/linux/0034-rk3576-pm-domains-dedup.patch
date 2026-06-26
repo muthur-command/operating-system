@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000034 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] pmdomain: rockchip: use BSP pm_domains driver
+
+Linux 6.18 upstreamed Rockchip PM domains to drivers/pmdomain/rockchip/,
+but the BSP driver in drivers/soc/rockchip/pm_domains.c is still required
+for extended APIs (idle_request, qos, pd_on/off) used by MPP drivers.
+Disable the upstream object to avoid duplicate symbol definitions.
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/pmdomain/rockchip/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pmdomain/rockchip/Makefile b/drivers/pmdomain/rockchip/Makefile
+index 1111111..2222222 100644
+--- a/drivers/pmdomain/rockchip/Makefile
++++ b/drivers/pmdomain/rockchip/Makefile
+@@ -1,2 +1,2 @@
+ # SPDX-License-Identifier: GPL-2.0-only
+-obj-$(CONFIG_ROCKCHIP_PM_DOMAINS)	+= pm-domains.o
++# pm-domains.o: use drivers/soc/rockchip/pm_domains.c (BSP superset)
+-- 
+2.34.1

@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Wed, 25 Jun 2026 15:00:00 +0800
+Subject: [PATCH] rk3576-pvtm-6.18-compat
+
+of_match_device() is declared in linux/of_device.h, which is no longer
+pulled in transitively via linux/of.h in 6.18.
+
+---
+ drivers/soc/rockchip/rockchip_pvtm.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/drivers/soc/rockchip/rockchip_pvtm.c
++++ b/drivers/soc/rockchip/rockchip_pvtm.c
+@@ -14,6 +14,7 @@
+ #include <linux/mfd/syscon.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
++#include <linux/of_device.h>
+ #include <linux/of_clk.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>

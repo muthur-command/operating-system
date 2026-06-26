@@ -1,0 +1,97 @@
+From 0000000000000000000000000000000000000031 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] drm: rknpu: Linux 6.18 scatterlist and pfn_t compat
+
+Linux 6.18 renamed sg_is_dma_bus_address() to sg_dma_is_bus_address()
+and removed linux/pfn_t.h; vmf_insert_mixed() now takes unsigned long pfn.
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/rknpu/rknpu_gem.c   | 8 +++-----
+ drivers/rknpu/rknpu_iommu.c | 8 ++++----
+ 2 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/rknpu/rknpu_gem.c b/drivers/rknpu/rknpu_gem.c
+index 1111111..2222222 100644
+--- a/drivers/rknpu/rknpu_gem.c
++++ b/drivers/rknpu/rknpu_gem.c
+@@ -14,7 +14,6 @@
+ #include <linux/shmem_fs.h>
+ #include <linux/dma-buf.h>
+ #include <linux/iommu.h>
+-#include <linux/pfn_t.h>
+ #include <linux/version.h>
+ #include <linux/version_compat_defs.h>
+ #include <asm/cacheflush.h>
+@@ -1269,8 +1268,7 @@ vm_fault_t rknpu_gem_fault(struct vm_fault *vmf)
+ 	}
+ 
+ 	pfn = page_to_pfn(rknpu_obj->pages[page_offset]);
+-	return vmf_insert_mixed(vma, vmf->address,
+-				__pfn_to_pfn_t(pfn, PFN_DEV));
++	return vmf_insert_mixed(vma, vmf->address, pfn);
+ }
+ #elif KERNEL_VERSION(4, 14, 0) <= LINUX_VERSION_CODE
+ int rknpu_gem_fault(struct vm_fault *vmf)
+@@ -1292,7 +1290,7 @@ int rknpu_gem_fault(struct vm_fault *vmf)
+ 	}
+ 
+ 	pfn = page_to_pfn(rknpu_obj->pages[page_offset]);
+-	ret = vm_insert_mixed(vma, vmf->address, __pfn_to_pfn_t(pfn, PFN_DEV));
++	ret = vm_insert_mixed(vma, vmf->address, pfn);
+ 
+ out:
+ 	switch (ret) {
+@@ -1324,8 +1322,7 @@ int rknpu_gem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+ 	}
+ 
+ 	pfn = page_to_pfn(rknpu_obj->pages[page_offset]);
+-	ret = vm_insert_mixed(vma, (unsigned long)vmf->virtual_address,
+-			      __pfn_to_pfn_t(pfn, PFN_DEV));
++	ret = vm_insert_mixed(vma, (unsigned long)vmf->virtual_address, pfn);
+ 
+ out:
+ 	switch (ret) {
+diff --git a/drivers/rknpu/rknpu_iommu.c b/drivers/rknpu/rknpu_iommu.c
+index 3333333..4444444 100644
+--- a/drivers/rknpu/rknpu_iommu.c
++++ b/drivers/rknpu/rknpu_iommu.c
+@@ -123,7 +123,7 @@ static int __finalise_sg(struct device *dev, struct scatterlist *sg,
+ 		sg_dma_len(s) = 0;
+ 
+ #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+-		if (sg_is_dma_bus_address(s)) {
++		if (sg_dma_is_bus_address(s)) {
+ 			if (i > 0)
+ 				cur = sg_next(cur);
+ 
+@@ -181,7 +181,7 @@ static void __invalidate_sg(struct scatterlist *sg, int nents)
+ 
+ #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+ 	for_each_sg(sg, s, nents, i) {
+-		if (sg_is_dma_bus_address(s)) {
++		if (sg_dma_is_bus_address(s)) {
+ 			sg_dma_unmark_bus_address(s);
+ 		} else {
+ 			if (sg_dma_address(s) != DMA_MAPPING_ERROR)
+@@ -318,7 +318,7 @@ void rknpu_iommu_dma_unmap_sg(struct device *dev, struct scatterlist *sg,
+ 	 * just have to be determined.
+ 	 */
+ 	for_each_sg(sg, tmp, nents, i) {
+-		if (sg_is_dma_bus_address(tmp)) {
++		if (sg_dma_is_bus_address(tmp)) {
+ 			sg_dma_unmark_bus_address(tmp);
+ 			continue;
+ 		}
+@@ -332,7 +332,7 @@ void rknpu_iommu_dma_unmap_sg(struct device *dev, struct scatterlist *sg,
+ 
+ 	nents -= i;
+ 	for_each_sg(tmp, tmp, nents, i) {
+-		if (sg_is_dma_bus_address(tmp)) {
++		if (sg_dma_is_bus_address(tmp)) {
+ 			sg_dma_unmark_bus_address(tmp);
+ 			continue;
+ 		}
+-- 
+2.34.1

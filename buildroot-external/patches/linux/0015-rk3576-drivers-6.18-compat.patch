@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Tue, 24 Jun 2026 12:00:00 +0800
+Subject: [PATCH] rk3576-drivers-6.18-compat
+
+Linux 6.18 changed platform_driver.remove to return void. Fix remaining
+RK3576 board drivers (CAN, remotectl) that still use int remove callbacks.
+
+---
+ drivers/input/remotectl/rockchip_pwm_remotectl.c | 3 +--
+ drivers/net/can/rockchip/rk3576_canfd.c          | 3 +--
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/can/rockchip/rk3576_canfd.c b/drivers/net/can/rockchip/rk3576_canfd.c
+index 1111111..2222222 100644
+--- a/drivers/net/can/rockchip/rk3576_canfd.c
++++ b/drivers/net/can/rockchip/rk3576_canfd.c
+@@ -1313,7 +1313,7 @@ static int rk3576_canfd_probe(struct platform_device *pdev)
+ 	return err;
+ }
+ 
+-static int rk3576_canfd_remove(struct platform_device *pdev)
++static void rk3576_canfd_remove(struct platform_device *pdev)
+ {
+ 	struct net_device *ndev = platform_get_drvdata(pdev);
+ 	struct rk3576_canfd *rcan = netdev_priv(ndev);
+@@ -1332,7 +1332,6 @@ static int rk3576_canfd_remove(struct platform_device *pdev)
+ 	netif_napi_del(&rcan->napi);
+ 	free_candev(ndev);
+ 
+-	return 0;
+ }
+ 
+ static struct platform_driver rk3576_canfd_driver = {
+diff --git a/drivers/input/remotectl/rockchip_pwm_remotectl.c b/drivers/input/remotectl/rockchip_pwm_remotectl.c
+index 3333333..4444444 100644
+--- a/drivers/input/remotectl/rockchip_pwm_remotectl.c
++++ b/drivers/input/remotectl/rockchip_pwm_remotectl.c
+@@ -1007,9 +1007,8 @@ static int rk_pwm_probe(struct platform_device *pdev)
+ 	return ret;
+ }
+ 
+-static int rk_pwm_remove(struct platform_device *pdev)
++static void rk_pwm_remove(struct platform_device *pdev)
+ {
+-	return 0;
+ }
+ 
+ static int remotectl_suspend(struct device *dev)
+-- 
+2.34.1

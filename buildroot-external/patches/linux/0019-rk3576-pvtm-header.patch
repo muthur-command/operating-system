@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Tue, 24 Jun 2026 18:00:00 +0800
+Subject: [PATCH] rk3576-pvtm-header
+
+The BSP PVTM and OPP drivers include linux/soc/rockchip/pvtm.h but 0010
+never added it. Provide the header declaring rockchip_get_pvtm_value().
+
+---
+ include/linux/soc/rockchip/pvtm.h | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+ create mode 100644 include/linux/soc/rockchip/pvtm.h
+
+--- a/include/linux/soc/rockchip/pvtm.h
++++ b/include/linux/soc/rockchip/pvtm.h
+@@ -0,0 +1,19 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __SOC_ROCKCHIP_PVTM_H
++#define __SOC_ROCKCHIP_PVTM_H
++
++#include <linux/types.h>
++
++#if IS_ENABLED(CONFIG_ROCKCHIP_PVTM)
++u32 rockchip_get_pvtm_value(unsigned int id, unsigned int ring_sel,
++			    unsigned int time_us);
++#else
++static inline u32 rockchip_get_pvtm_value(unsigned int id,
++					unsigned int ring_sel,
++					unsigned int time_us)
++{
++	return 0;
++}
++#endif
++
++#endif /* __SOC_ROCKCHIP_PVTM_H */

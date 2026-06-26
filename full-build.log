@@ -1,0 +1,296 @@
+make -C /build/buildroot O=/build/output BR2_EXTERNAL=/build/buildroot-external
+make[1]: Entering directory '/build/buildroot'
+/usr/bin/make -j1  O=/build/output HOSTCC="/usr/bin/gcc" HOSTCXX="/usr/bin/g++" syncconfig
+  GEN     /build/output/Makefile
+[7m>>> rockchip-rga main Downloading[27m
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git init . 
+Reinitialized existing Git repository in /build/buildroot/dl/rockchip-rga/git/.git/
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git remote set-url origin 'https://github.com/mcos-platform/linux-rga.git' 
+Fetching all references
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git fetch origin 
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git fetch origin -t -f 
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git submodule --quiet foreach 'printf "Deregistering submodule \"%s\"\n" "${path}" && cd .. && rm -rf "${path##*/}"' 
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git checkout -f -q 'main' 
+GIT_DIR=/build/buildroot/dl/rockchip-rga/git/.git git clean -ffdx 
+WARNING: no hash file for rockchip-rga-main-git4.tar.gz
+[7m>>> rockchip-rga main Extracting[27m
+gzip -d -c /build/buildroot/dl/rockchip-rga/rockchip-rga-main-git4.tar.gz | tar --strip-components=1 -C /build/output/build/rockchip-rga-main   -xf -
+[7m>>> rockchip-rga main Patching[27m
+[7m>>> rockchip-rga main Configuring[27m
+rm -rf /build/output/build/rockchip-rga-main//buildroot-build
+mkdir -p /build/output/build/rockchip-rga-main//buildroot-build
+sed -e "/^\[binaries\]$/s:$::" -e "/^\[properties\]$/s:$::"         -e "s%@TARGET_CC@%/build/output/host/bin/aarch64-buildroot-linux-gnu-gcc%g" -e "s%@TARGET_CXX@%/build/output/host/bin/aarch64-buildroot-linux-gnu-g++%g" -e "s%@TARGET_AR@%/build/output/host/bin/aarch64-buildroot-linux-gnu-gcc-ar%g" -e "s%@TARGET_FC@%/bin/false%g" -e "s%@TARGET_STRIP@%/build/output/host/bin/aarch64-buildroot-linux-gnu-strip%g" -e "s%@TARGET_ARCH@%aarch64%g" -e "s%@TARGET_CPU@%cortex-a53%g" -e "s%@TARGET_ENDIAN@%little%g" -e "s%@TARGET_FCFLAGS@%%g" -e "s%@TARGET_CFLAGS@%'-D_LARGEFILE_SOURCE', '-D_LARGEFILE64_SOURCE', '-D_FILE_OFFSET_BITS=64', '-O2', '-g0', '-D_FORTIFY_SOURCE=1'%g" -e "s%@TARGET_LDFLAGS@%%g" -e "s%@TARGET_CXXFLAGS@%'-D_LARGEFILE_SOURCE', '-D_LARGEFILE64_SOURCE', '-D_FILE_OFFSET_BITS=64', '-O2', '-g0', '-D_FORTIFY_SOURCE=1'%g" -e "s%@BR2_CMAKE@%/build/output/host/bin/cmake%g" -e "s%@PKGCONF_HOST_BINARY@%/build/output/host/bin/pkgconf%g" -e "s%@HOST_DIR@%/build/output/host%g" -e "s%@STAGING_DIR@%/build/output/host/aarch64-buildroot-linux-gnu/sysroot%g" -e "s%@STATIC@%false%g" /build/buildroot/support/misc/cross-compilation.conf.in > /build/output/build/rockchip-rga-main//buildroot-build/cross-compilation.conf
+PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" CC_FOR_BUILD="/build/output/host/bin/ccache /usr/bin/gcc" CXX_FOR_BUILD="/build/output/host/bin/ccache /usr/bin/g++"  PYTHONNOUSERSITE=y /build/output/host/bin/meson setup --prefix=/usr --libdir=lib --default-library=shared --buildtype=release --cross-file=/build/output/build/rockchip-rga-main//buildroot-build/cross-compilation.conf -Db_pie=false -Db_staticpic=true -Dstrip=false -Dbuild.pkg_config_path=/build/output/host/lib/pkgconfig -Dbuild.cmake_prefix_path=/build/output/host/lib/cmake -Dlibdrm=true /build/output/build/rockchip-rga-main/ /build/output/build/rockchip-rga-main//buildroot-build
+The Meson build system
+Version: 1.7.0
+Source dir: /build/output/build/rockchip-rga-main
+Build dir: /build/output/build/rockchip-rga-main/buildroot-build
+Build type: cross build
+Project name: librga
+Project version: 2.1.0
+C++ compiler for the host machine: /build/output/host/bin/aarch64-buildroot-linux-gnu-g++ (gcc 13.4.0 "aarch64-buildroot-linux-gnu-g++.br_real (Buildroot -gebde75d4c4) 13.4.0")
+C++ linker for the host machine: /build/output/host/bin/aarch64-buildroot-linux-gnu-g++ ld.bfd 2.43.1
+C++ compiler for the build machine: /build/output/host/bin/ccache /usr/bin/g++ (gcc 14.2.0 "g++ (Debian 14.2.0-19) 14.2.0")
+C++ linker for the build machine: /build/output/host/bin/ccache /usr/bin/g++ ld.bfd 2.44
+Build machine cpu family: x86_64
+Build machine cpu: x86_64
+Host machine cpu family: aarch64
+Host machine cpu: cortex-a53
+Target machine cpu family: aarch64
+Target machine cpu: cortex-a53
+Run-time dependency threads found: YES
+Found pkg-config: YES (/build/output/host/bin/pkgconf) 2.3.0
+Build targets in project: 2
+
+librga 2.1.0
+
+  User defined options
+    Cross files            : /build/output/build/rockchip-rga-main//buildroot-build/cross-compilation.conf
+    build.cmake_prefix_path: /build/output/host/lib/cmake
+    build.pkg_config_path  : /build/output/host/lib/pkgconfig
+    b_pie                  : false
+    b_staticpic            : true
+    buildtype              : release
+    default_library        : shared
+    libdir                 : lib
+    libdrm                 : true
+    prefix                 : /usr
+    strip                  : false
+
+Found ninja-1.11.1.git.kitware.jobserver-1 at /build/output/host/bin/ninja
+[7m>>> rockchip-rga main Building[27m
+GIT_DIR=. PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"  PYTHONNOUSERSITE=y /build/output/host/bin/ninja   -C /build/output/build/rockchip-rga-main//buildroot-build
+ninja: Entering directory `/build/output/build/rockchip-rga-main//buildroot-build'
+[1/30] Compiling C++ object librga.so.2.1.0.p/core_GrallocOps.cpp.o
+[2/30] Compiling C++ object librga.so.2.1.0.p/core_utils_utils.cpp.o
+[3/30] Compiling C++ object librga.so.2.1.0.p/core_RgaApi.cpp.o
+[4/30] Compiling C++ object librga.so.2.1.0.p/core_rga_sync.cpp.o
+[5/30] Compiling C++ object librga.so.2.1.0.p/im2d_api_src_im2d_log.cpp.o
+[6/30] Compiling C++ object librga.so.2.1.0.p/core_utils_android_utils_src_android_utils.cpp.o
+[7/30] Compiling C++ object librga.a.p/core_utils_android_utils_src_android_utils.cpp.o
+[8/30] Compiling C++ object librga.a.p/core_utils_utils.cpp.o
+[9/30] Compiling C++ object librga.so.2.1.0.p/core_utils_drm_utils_src_drm_utils.cpp.o
+[10/30] Compiling C++ object librga.a.p/core_utils_drm_utils_src_drm_utils.cpp.o
+[11/30] Compiling C++ object librga.so.2.1.0.p/core_RgaUtils.cpp.o
+[12/30] Compiling C++ object librga.a.p/core_GrallocOps.cpp.o
+[13/30] Compiling C++ object librga.so.2.1.0.p/core_NormalRgaApi.cpp.o
+[14/30] Compiling C++ object librga.a.p/core_RgaUtils.cpp.o
+[15/30] Compiling C++ object librga.so.2.1.0.p/core_RockchipRga.cpp.o
+[16/30] Compiling C++ object librga.a.p/core_RockchipRga.cpp.o
+[17/30] Compiling C++ object librga.a.p/im2d_api_src_im2d_log.cpp.o
+[18/30] Compiling C++ object librga.a.p/core_rga_sync.cpp.o
+[19/30] Compiling C++ object librga.a.p/core_RgaApi.cpp.o
+[20/30] Compiling C++ object librga.so.2.1.0.p/im2d_api_src_im2d_debugger.cpp.o
+[21/30] Compiling C++ object librga.a.p/core_NormalRgaApi.cpp.o
+[22/30] Compiling C++ object librga.so.2.1.0.p/core_NormalRga.cpp.o
+[23/30] Compiling C++ object librga.a.p/im2d_api_src_im2d_debugger.cpp.o
+[24/30] Compiling C++ object librga.a.p/core_NormalRga.cpp.o
+[25/30] Compiling C++ object librga.so.2.1.0.p/im2d_api_src_im2d_impl.cpp.o
+[26/30] Compiling C++ object librga.so.2.1.0.p/im2d_api_src_im2d.cpp.o
+[27/30] Linking target librga.so.2.1.0
+[28/30] Compiling C++ object librga.a.p/im2d_api_src_im2d_impl.cpp.o
+[29/30] Compiling C++ object librga.a.p/im2d_api_src_im2d.cpp.o
+[30/30] Linking static target librga.a
+[7m>>> rockchip-rga main Installing to staging directory[27m
+GIT_DIR=. PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"  DESTDIR=/build/output/host/aarch64-buildroot-linux-gnu/sysroot PYTHONNOUSERSITE=y /build/output/host/bin/ninja  -C /build/output/build/rockchip-rga-main//buildroot-build install
+ninja: Entering directory `/build/output/build/rockchip-rga-main//buildroot-build'
+[0/1] Installing files
+Installing librga.so.2.1.0 to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/lib
+Installing librga.a to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/lib
+Installing /build/output/build/rockchip-rga-main/include/rga.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/drmrga.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/GrallocOps.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RockchipRga.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaMutex.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaSingleton.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaUtils.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaApi.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d.hpp to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_type.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_version.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_buffer.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_common.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_single.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_task.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_mpi.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_expand.h to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/buildroot-build/meson-private/librga.pc to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/lib/pkgconfig
+Installing symlink pointing to librga.so.2.1.0 to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/lib/librga.so.2
+Installing symlink pointing to librga.so.2 to /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/lib/librga.so
+[7m>>> rockchip-rga main Fixing libtool files[27m
+for la in $(find /build/output/host/aarch64-buildroot-linux-gnu/sysroot/usr/lib* -name "*.la"); do \
+	cp -a "${la}" "${la}.fixed" && \
+	/usr/bin/sed -i -e "s:/build/output:@BASE_DIR@:g" \
+		-e "s:/build/output/host/aarch64-buildroot-linux-gnu/sysroot:@STAGING_DIR@:g" \
+		 \
+		-e "s:\(['= ]\)/usr:\\1@STAGING_DIR@/usr:g" \
+		-e "s:\(['= ]\)/lib:\\1@STAGING_DIR@/lib:g" \
+		 \
+		-e "s:@STAGING_DIR@:/build/output/host/aarch64-buildroot-linux-gnu/sysroot:g" \
+		-e "s:@BASE_DIR@:/build/output:g" \
+		"${la}.fixed" && \
+	if cmp -s "${la}" "${la}.fixed"; then \
+		rm -f "${la}.fixed"; \
+	else \
+		mv "${la}.fixed" "${la}"; \
+	fi || exit 1; \
+done
+[7m>>> rockchip-rga main Installing to target[27m
+GIT_DIR=. PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"  DESTDIR=/build/output/target PYTHONNOUSERSITE=y /build/output/host/bin/ninja  -C /build/output/build/rockchip-rga-main//buildroot-build install
+ninja: Entering directory `/build/output/build/rockchip-rga-main//buildroot-build'
+[0/1] Installing files
+Installing librga.so.2.1.0 to /build/output/target/usr/lib
+Installing librga.a to /build/output/target/usr/lib
+Installing /build/output/build/rockchip-rga-main/include/rga.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/drmrga.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/GrallocOps.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RockchipRga.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaMutex.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaSingleton.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaUtils.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/include/RgaApi.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d.hpp to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_type.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_version.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_buffer.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_common.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_single.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_task.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_mpi.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/im2d_api/im2d_expand.h to /build/output/target/usr/include/rga
+Installing /build/output/build/rockchip-rga-main/buildroot-build/meson-private/librga.pc to /build/output/target/usr/lib/pkgconfig
+Installing symlink pointing to librga.so.2.1.0 to /build/output/target/usr/lib/librga.so.2
+Installing symlink pointing to librga.so.2 to /build/output/target/usr/lib/librga.so
+[7m>>> gstreamer1-rockchip main Downloading[27m
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git init . 
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+Initialized empty Git repository in /build/buildroot/dl/gstreamer1-rockchip/git/.git/
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git remote add origin 'https://github.com/mcos-platform/gstreamer-rockchip.git' 
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git remote set-url origin 'https://github.com/mcos-platform/gstreamer-rockchip.git' 
+Fetching all references
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git fetch origin 
+From https://github.com/mcos-platform/gstreamer-rockchip
+ * [new branch]      main       -> origin/main
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git fetch origin -t -f 
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git submodule --quiet foreach 'printf "Deregistering submodule \"%s\"\n" "${path}" && cd .. && rm -rf "${path##*/}"' 
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git checkout -f -q 'main' 
+GIT_DIR=/build/buildroot/dl/gstreamer1-rockchip/git/.git git clean -ffdx 
+WARNING: no hash file for gstreamer1-rockchip-main-git4.tar.gz
+[7m>>> gstreamer1-rockchip main Extracting[27m
+gzip -d -c /build/buildroot/dl/gstreamer1-rockchip/gstreamer1-rockchip-main-git4.tar.gz | tar --strip-components=1 -C /build/output/build/gstreamer1-rockchip-main   -xf -
+[7m>>> gstreamer1-rockchip main Patching[27m
+[7m>>> gstreamer1-rockchip main Configuring[27m
+rm -rf /build/output/build/gstreamer1-rockchip-main//buildroot-build
+mkdir -p /build/output/build/gstreamer1-rockchip-main//buildroot-build
+sed -e "/^\[binaries\]$/s:$::" -e "/^\[properties\]$/s:$::"         -e "s%@TARGET_CC@%/build/output/host/bin/aarch64-buildroot-linux-gnu-gcc%g" -e "s%@TARGET_CXX@%/build/output/host/bin/aarch64-buildroot-linux-gnu-g++%g" -e "s%@TARGET_AR@%/build/output/host/bin/aarch64-buildroot-linux-gnu-gcc-ar%g" -e "s%@TARGET_FC@%/bin/false%g" -e "s%@TARGET_STRIP@%/build/output/host/bin/aarch64-buildroot-linux-gnu-strip%g" -e "s%@TARGET_ARCH@%aarch64%g" -e "s%@TARGET_CPU@%cortex-a53%g" -e "s%@TARGET_ENDIAN@%little%g" -e "s%@TARGET_FCFLAGS@%%g" -e "s%@TARGET_CFLAGS@%'-D_LARGEFILE_SOURCE', '-D_LARGEFILE64_SOURCE', '-D_FILE_OFFSET_BITS=64', '-O2', '-g0', '-D_FORTIFY_SOURCE=1'%g" -e "s%@TARGET_LDFLAGS@%%g" -e "s%@TARGET_CXXFLAGS@%'-D_LARGEFILE_SOURCE', '-D_LARGEFILE64_SOURCE', '-D_FILE_OFFSET_BITS=64', '-O2', '-g0', '-D_FORTIFY_SOURCE=1'%g" -e "s%@BR2_CMAKE@%/build/output/host/bin/cmake%g" -e "s%@PKGCONF_HOST_BINARY@%/build/output/host/bin/pkgconf%g" -e "s%@HOST_DIR@%/build/output/host%g" -e "s%@STAGING_DIR@%/build/output/host/aarch64-buildroot-linux-gnu/sysroot%g" -e "s%@STATIC@%false%g" /build/buildroot/support/misc/cross-compilation.conf.in > /build/output/build/gstreamer1-rockchip-main//buildroot-build/cross-compilation.conf
+PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" CC_FOR_BUILD="/build/output/host/bin/ccache /usr/bin/gcc" CXX_FOR_BUILD="/build/output/host/bin/ccache /usr/bin/g++"  PYTHONNOUSERSITE=y /build/output/host/bin/meson setup --prefix=/usr --libdir=lib --default-library=shared --buildtype=release --cross-file=/build/output/build/gstreamer1-rockchip-main//buildroot-build/cross-compilation.conf -Db_pie=false -Db_staticpic=true -Dstrip=false -Dbuild.pkg_config_path=/build/output/host/lib/pkgconfig -Dbuild.cmake_prefix_path=/build/output/host/lib/cmake -Drockchipmpp=enabled -Drga=enabled /build/output/build/gstreamer1-rockchip-main/ /build/output/build/gstreamer1-rockchip-main//buildroot-build
+The Meson build system
+Version: 1.7.0
+Source dir: /build/output/build/gstreamer1-rockchip-main
+Build dir: /build/output/build/gstreamer1-rockchip-main/buildroot-build
+Build type: cross build
+Project name: gst-plugins-bad
+Project version: 1.14.4
+C compiler for the host machine: /build/output/host/bin/aarch64-buildroot-linux-gnu-gcc (gcc 13.4.0 "aarch64-buildroot-linux-gnu-gcc.br_real (Buildroot -gebde75d4c4) 13.4.0")
+C linker for the host machine: /build/output/host/bin/aarch64-buildroot-linux-gnu-gcc ld.bfd 2.43.1
+C compiler for the build machine: /build/output/host/bin/ccache /usr/bin/gcc (gcc 14.2.0 "gcc (Debian 14.2.0-19) 14.2.0")
+C linker for the build machine: /build/output/host/bin/ccache /usr/bin/gcc ld.bfd 2.44
+Build machine cpu family: x86_64
+Build machine cpu: x86_64
+Host machine cpu family: aarch64
+Host machine cpu: cortex-a53
+Target machine cpu family: aarch64
+Target machine cpu: cortex-a53
+Compiler for C supports arguments -fvisibility=hidden: YES 
+Compiler for C supports arguments -fno-strict-aliasing: YES 
+Message: Disabling GLib cast checks
+Message: Disabling deprecated GLib API
+Found pkg-config: YES (/build/output/host/bin/pkgconf) 2.3.0
+Run-time dependency gstreamer-1.0 found: YES 1.24.13
+Run-time dependency gstreamer-base-1.0 found: YES 1.24.13
+Run-time dependency gstreamer-allocators-1.0 found: YES 1.24.13
+Run-time dependency gstreamer-video-1.0 found: YES 1.24.13
+Run-time dependency gstreamer-pbutils-1.0 found: YES 1.24.13
+Run-time dependency glib-2.0 found: YES 2.82.5
+Found CMake: /build/output/host/bin/cmake (3.31.9)
+Run-time dependency x11 found: NO (tried pkgconfig and cmake)
+Run-time dependency libdrm found: YES 2.4.124
+Run-time dependency rockchip_mpp found: YES 1.3.9
+Run-time dependency librga found: YES 2.1.0
+Header "gst/video/video-format.h" has symbol "GST_VIDEO_FORMAT_NV12_10LE40" with dependency gstreamer-video-1.0: YES 
+Header "gst/video/video-format.h" has symbol "GST_VIDEO_FORMAT_NV16_10LE40" with dependency gstreamer-video-1.0: NO 
+Checking for function "drmModeGetFB2" with dependency libdrm: YES 
+Checking for function "drmCloseBufferHandle" with dependency libdrm: YES 
+Configuring config.h using configuration
+Program python3 found: YES (/build/output/host/bin/python3)
+Build targets in project: 2
+
+gst-plugins-bad 1.14.4
+
+  User defined options
+    Cross files            : /build/output/build/gstreamer1-rockchip-main//buildroot-build/cross-compilation.conf
+    build.cmake_prefix_path: /build/output/host/lib/cmake
+    build.pkg_config_path  : /build/output/host/lib/pkgconfig
+    b_pie                  : false
+    b_staticpic            : true
+    buildtype              : release
+    default_library        : shared
+    libdir                 : lib
+    prefix                 : /usr
+    rga                    : enabled
+    rockchipmpp            : enabled
+    strip                  : false
+
+Found ninja-1.11.1.git.kitware.jobserver-1 at /build/output/host/bin/ninja
+[7m>>> gstreamer1-rockchip main Building[27m
+GIT_DIR=. PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"  PYTHONNOUSERSITE=y /build/output/host/bin/ninja   -C /build/output/build/gstreamer1-rockchip-main//buildroot-build
+ninja: Entering directory `/build/output/build/gstreamer1-rockchip-main//buildroot-build'
+[1/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppallocator.c.o
+[2/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmpph264enc.c.o
+[3/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmpph265enc.c.o
+[4/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppvp8enc.c.o
+[5/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmpp.c.o
+[6/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppvideodec.c.o
+[7/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppjpegenc.c.o
+[8/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppjpegdec.c.o
+[9/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppdec.c.o
+[10/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppvpxalphadecodebin.c.o
+[11/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppenc.c.o
+[12/15] Compiling C object gst/rockchipmpp/libgstrockchipmpp.so.p/gstmppalphadecodebin.c.o
+[13/15] Linking target gst/rockchipmpp/libgstrockchipmpp.so
+[14/15] Compiling C object gst/kmssrc/libgstkmssrc.so.p/gstkmssrc.c.o
+[15/15] Linking target gst/kmssrc/libgstkmssrc.so
+[7m>>> gstreamer1-rockchip main Installing to target[27m
+GIT_DIR=. PATH="/build/output/host/bin:/build/output/host/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"  DESTDIR=/build/output/target PYTHONNOUSERSITE=y /build/output/host/bin/ninja  -C /build/output/build/gstreamer1-rockchip-main//buildroot-build install
+ninja: Entering directory `/build/output/build/gstreamer1-rockchip-main//buildroot-build'
+[0/1] Installing files
+Installing gst/rockchipmpp/libgstrockchipmpp.so to /build/output/target/usr/lib/gstreamer-1.0
+Installing gst/kmssrc/libgstkmssrc.so to /build/output/target/usr/lib/gstreamer-1.0
+[7m>>> mcio 1.0.0 Syncing from source dir /build/buildroot-external/package/mcio[27m
+rsync -au --chmod=u=rwX,go=rX  --exclude .svn --exclude .git --exclude .hg --exclude .bzr --exclude CVS /build/buildroot-external/package/mcio/ /build/output/build/mcio-1.0.0
+[7m>>> mcio 1.0.0 Configuring[27m
+/build/buildroot-external/package/mcio/fetch-version-json.sh ""https://version.muthur-command.com/""stable".json" "/build/output/build/mcio-1.0.0/version.json"
+[7m>>> mcio 1.0.0 Building[27m
+/build/buildroot-external/package/mcio/fetch-container-image.sh "aarch64" "mc-neardi-lb200" /build/output/build/mcio-1.0.0/version.json supervisor "/build/buildroot/dl/mcio" "/build/output/build/mcio-1.0.0/images"
+time="2026-06-26T15:02:48Z" level=fatal msg="Error parsing image name \"docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3\": reading manifest 2026.03.3 in ghcr.io/muthur-command/aarch64-mcos-supervisor: manifest unknown"
+Retrying "skopeo inspect --override-arch 'arm64' 'docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3' | jq -r '.Digest'" in 5s (3 retries left)...
+time="2026-06-26T15:03:07Z" level=fatal msg="Error parsing image name \"docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3\": reading manifest 2026.03.3 in ghcr.io/muthur-command/aarch64-mcos-supervisor: manifest unknown"
+Retrying "skopeo inspect --override-arch 'arm64' 'docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3' | jq -r '.Digest'" in 15s (2 retries left)...
+time="2026-06-26T15:03:31Z" level=fatal msg="Error parsing image name \"docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3\": reading manifest 2026.03.3 in ghcr.io/muthur-command/aarch64-mcos-supervisor: manifest unknown"
+Retrying "skopeo inspect --override-arch 'arm64' 'docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3' | jq -r '.Digest'" in 45s (1 retries left)...
+time="2026-06-26T15:04:22Z" level=fatal msg="Error parsing image name \"docker://ghcr.io/muthur-command/aarch64-mcos-supervisor:2026.03.3\": reading manifest 2026.03.3 in ghcr.io/muthur-command/aarch64-mcos-supervisor: manifest unknown"
+make[2]: *** [package/pkg-generic.mk:273: /build/output/build/mcio-1.0.0/.stamp_built] Error 2
+make[1]: *** [Makefile:83: _all] Error 2
+make[1]: Leaving directory '/build/buildroot'
+make: *** [Makefile:42: default] Error 2

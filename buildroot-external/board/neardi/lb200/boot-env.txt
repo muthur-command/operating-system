@@ -1,0 +1,18 @@
+# Boot environment variables for Neardi LB200
+# These will be loaded by U-Boot and passed to kernel
+
+# MAC address configuration
+# ethaddr will be set by U-Boot from OTP or EEPROM
+
+# Boot delay (seconds)
+bootdelay=2
+
+# Kernel command line base
+# Note: actual bootargs are set by U-Boot based on boot source
+
+# MMC boot partition
+mmcdev=0
+mmcpart=1
+
+# Default bootcmd (will be overridden by U-Boot)
+# bootcmd=run altbootcmd

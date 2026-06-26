@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Neardi LB200 misc devices (mainline compatible)
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+
+/ {
+	pcie_dev_pwren: pcie-dev-pwren {
+		compatible = "regulator-fixed";
+		regulator-name = "Pcie_Pwren";
+		regulator-boot-on;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&gpio0 RK_PD3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwren_pcie>;
+	};
+
+	vcc_lte_en: vcc-lte-en {
+		compatible = "regulator-fixed";
+		regulator-name = "Lte_Pwren";
+		regulator-boot-on;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwren_lte>;
+	};
+
+	leds: leds {
+		compatible = "gpio-leds";
+
+		work_led: work {
+			gpios = <&gpio2 RK_PD7 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		work1_led: work1 {
+			gpios = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+};
+
+&pcie0 {
+	reset-gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_HIGH>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pcie_rst>;
+	status = "okay";
+};
+
+&uart5 {
+	status = "okay";
+	linux,rs485-enabled-at-boot-time;
+	rs485-rts-delay = <0 0>;
+	rs485-rx-during-tx;
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart5m2_xfer>;
+};
+
+&can0 {
+	assigned-clocks = <&cru CLK_CAN0>;
+	assigned-clock-rates = <200000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0m0_pins>;
+	status = "okay";
+};
+
+&can1 {
+	assigned-clocks = <&cru CLK_CAN1>;
+	assigned-clock-rates = <200000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1m0_pins>;
+	status = "okay";
+};
+
+&sfc1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&fspi1m1_pins &fspi1m1_csn0>;
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
+&pinctrl {
+	lte {
+		pwren_lte: pwren-lte {
+			rockchip,pins = <0 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	pcie {
+		pcie_rst: pcie-rst {
+			rockchip,pins = <2 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		pwren_pcie: pwren-pcie {
+			rockchip,pins = <0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};

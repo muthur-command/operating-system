@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Wed, 25 Jun 2026 13:00:00 +0800
+Subject: [PATCH] rk3576-pm-config-header
+
+The BSP rockchip_pm_config driver includes linux/rockchip/rockchip_pm_config.h
+but 0010 never added it.
+
+---
+ include/linux/rockchip/rockchip_pm_config.h | 34 +++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+ create mode 100644 include/linux/rockchip/rockchip_pm_config.h
+
+--- a/include/linux/rockchip/rockchip_pm_config.h
++++ b/include/linux/rockchip/rockchip_pm_config.h
+@@ -0,0 +1,34 @@
++/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
++/*
++ * Copyright (c) 2023 Rockchip Electronics Co., Ltd.
++ */
++
++#ifndef __ROCKCHIP_PM_CONFIG_H
++#define __ROCKCHIP_PM_CONFIG_H
++
++#include <linux/types.h>
++
++struct rk_sleep_config {
++	u32 mode_config;
++	u32 wakeup_config;
++	u32 sleep_debug_en;
++	u32 pwm_regulator_config;
++	u32 *power_ctrl_config;
++	u32 power_ctrl_config_cnt;
++	u32 *sleep_io_config;
++	u32 sleep_io_config_cnt;
++	u32 apios_suspend;
++	u32 io_ret_config;
++	u32 sleep_pin_config[2];
++};
++
++#if IS_REACHABLE(CONFIG_ROCKCHIP_SUSPEND_MODE)
++const struct rk_sleep_config *rockchip_get_cur_sleep_config(void);
++#else
++static inline const struct rk_sleep_config *rockchip_get_cur_sleep_config(void)
++{
++	return NULL;
++}
++#endif
++
++#endif /* __ROCKCHIP_PM_CONFIG_H */

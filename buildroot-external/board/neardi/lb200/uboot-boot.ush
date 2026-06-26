@@ -1,0 +1,15 @@
+# U-Boot boot script for Neardi LB200
+# This script is compiled by mkimage into boot.scr
+
+# Set console
+setenv console "console=ttyS2,1500000n8"
+
+# Set bootargs
+setenv bootargs "root=PARTUUID=${distro_bootpart} rw rootwait ${console} systemd.unit=multi-user.target"
+
+# Load kernel and DTB
+load mmc 0:1 ${kernel_addr_r} Image
+load mmc 0:1 ${fdt_addr_r} rk3576-mc-neardi-lb200.dtb
+
+# Boot the kernel
+booti ${kernel_addr_r} - ${fdt_addr_r}

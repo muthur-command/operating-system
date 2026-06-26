@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000032 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] drm: rknpu: replace version_compat_defs.h with mm.h
+
+Rockchip BSP version_compat_defs.h was never added to the patch series.
+Linux 6.18 provides vm_flags_set()/vm_flags_clear() in linux/mm.h.
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/rknpu/rknpu_gem.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/rknpu/rknpu_gem.c b/drivers/rknpu/rknpu_gem.c
+index 1111111..2222222 100644
+--- a/drivers/rknpu/rknpu_gem.c
++++ b/drivers/rknpu/rknpu_gem.c
+@@ -15,7 +15,7 @@
+ #include <linux/dma-buf.h>
+ #include <linux/iommu.h>
+ #include <linux/version.h>
+-#include <linux/version_compat_defs.h>
++#include <linux/mm.h>
+ #include <asm/cacheflush.h>
+ 
+ #if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
+-- 
+2.34.1

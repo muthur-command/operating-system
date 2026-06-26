@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Neardi LB200 DisplayPort / USB-C Alt Mode (mainline compatible)
+ */
+
+#include <dt-bindings/soc/rockchip,vop2.h>
+
+&vp2 {
+	vp2_out_dp0: endpoint@ROCKCHIP_VOP2_EP_DP0 {
+		reg = <ROCKCHIP_VOP2_EP_DP0>;
+		remote-endpoint = <&dp0_in_vp2>;
+	};
+};

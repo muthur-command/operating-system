@@ -1,0 +1,243 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Mon, 23 Jun 2026 12:00:00 +0800
+Subject: [PATCH] rk3576-soc-can-pwm-dp
+
+--- a/arch/arm64/boot/dts/rockchip/rk3576.dtsi	2026-05-10 23:20:52.000000000 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576.dtsi	2026-06-23 04:35:01.474363360 -0700
+@@ -1016,6 +1016,31 @@
+ 			status = "disabled";
+ 		};
+ 
++
++		pwm0_2ch_0: pwm@27330000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x27330000 0x0 0x1000>;
++			interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm0m0_ch0>;
++			clocks = <&cru CLK_PMU1PWM>, <&cru PCLK_PMU1PWM>;
++			clock-names = "pwm", "pclk";
++			status = "disabled";
++		};
++
++		pwm0_2ch_1: pwm@27331000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x27331000 0x0 0x1000>;
++			interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm0m0_ch1>;
++			clocks = <&cru CLK_PMU1PWM>, <&cru PCLK_PMU1PWM>;
++			clock-names = "pwm", "pclk";
++			status = "disabled";
++		};
++
+ 		uart1: serial@27310000 {
+ 			compatible = "rockchip,rk3576-uart", "snps,dw-apb-uart";
+ 			reg = <0x0 0x27310000 0x0 0x100>;
+@@ -1446,6 +1471,96 @@
+ 			};
+ 		};
+ 
++		edp: edp@27dc0000 {
++			compatible = "rockchip,rk3576-edp";
++			reg = <0x0 0x27dc0000 0x0 0x1000>;
++			interrupts = <GIC_SPI 365 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&cru CLK_EDP0_24M>, <&cru PCLK_EDP0>,
++				 <&cru CLK_EDP0_200M>, <&cru HCLK_VO0_ROOT>;
++			clock-names = "dp", "pclk", "spdif", "hclk";
++			resets = <&cru SRST_EDP0_24M>, <&cru SRST_P_EDP0>;
++			reset-names = "dp", "apb";
++			phys = <&hdptxphy>;
++			phy-names = "dp";
++			power-domains = <&power RK3576_PD_VO0>;
++			rockchip,grf = <&vo0_grf>;
++			#sound-dai-cells = <1>;
++			status = "disabled";
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@0 {
++					reg = <0>;
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					edp_in_vp0: endpoint@0 {
++						reg = <0>;
++						status = "disabled";
++					};
++
++					edp_in_vp1: endpoint@1 {
++						reg = <1>;
++						status = "disabled";
++					};
++
++					edp_in_vp2: endpoint@2 {
++						reg = <2>;
++						status = "disabled";
++					};
++				};
++			};
++		};
++
++		dp: dp@27e40000 {
++			compatible = "rockchip,rk3576-dp";
++			reg = <0x0 0x27e40000 0x0 0x30000>;
++			interrupts = <GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&cru PCLK_DP0>, <&cru CLK_AUX16MHZ_0>,
++				 <&cru ACLK_DP0>;
++			clock-names = "apb", "aux", "hdcp";
++			assigned-clocks = <&cru CLK_AUX16MHZ_0>;
++			assigned-clock-rates = <16000000>;
++			resets = <&cru SRST_DP0>;
++			phys = <&usbdp_phy PHY_TYPE_DP>;
++			power-domains = <&power RK3576_PD_VO1>;
++			status = "disabled";
++
++			dp0: dp0 {
++				#sound-dai-cells = <1>;
++				status = "disabled";
++
++				ports {
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					port@0 {
++						reg = <0>;
++						#address-cells = <1>;
++						#size-cells = <0>;
++
++						dp0_in_vp0: endpoint@0 {
++							reg = <0>;
++							status = "disabled";
++						};
++
++						dp0_in_vp1: endpoint@1 {
++							reg = <1>;
++							status = "disabled";
++						};
++
++						dp0_in_vp2: endpoint@2 {
++							reg = <2>;
++							status = "disabled";
++						};
++					};
++				};
++			};
++		};
++
++
+ 		sai7: sai@27ed0000 {
+ 			compatible = "rockchip,rk3576-sai";
+ 			reg = <0x0 0x27ed0000 0x0 0x1000>;
+@@ -2480,6 +2595,106 @@
+ 			status = "disabled";
+ 		};
+ 
++
++		can0: can@2ac00000 {
++			compatible = "rockchip,rk3576-canfd";
++			reg = <0x0 0x2ac00000 0x0 0x1000>;
++			interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&cru CLK_CAN0>, <&cru HCLK_CAN0>;
++			clock-names = "baudclk", "apb_pclk";
++			resets = <&cru SRST_CAN0>, <&cru SRST_H_CAN0>;
++			reset-names = "can", "can-apb";
++			dmas = <&dmac0 20>;
++			dma-names = "rx";
++			status = "disabled";
++		};
++
++		can1: can@2ac10000 {
++			compatible = "rockchip,rk3576-canfd";
++			reg = <0x0 0x2ac10000 0x0 0x1000>;
++			interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&cru CLK_CAN1>, <&cru HCLK_CAN1>;
++			clock-names = "baudclk", "apb_pclk";
++			resets = <&cru SRST_CAN1>, <&cru SRST_H_CAN1>;
++			reset-names = "can", "can-apb";
++			dmas = <&dmac1 21>;
++			dma-names = "rx";
++			status = "disabled";
++		};
++
++
++		pwm1_6ch_0: pwm@2add0000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x2add0000 0x0 0x1000>;
++			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm1m0_ch0>;
++			clocks = <&cru CLK_PWM1>, <&cru PCLK_PWM1>, <&cru CLK_OSC_PWM1>;
++			clock-names = "pwm", "pclk", "osc";
++			status = "disabled";
++		};
++
++		pwm1_6ch_1: pwm@2add1000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x2add1000 0x0 0x1000>;
++			interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm1m0_ch1>;
++			clocks = <&cru CLK_PWM1>, <&cru PCLK_PWM1>, <&cru CLK_OSC_PWM1>;
++			clock-names = "pwm", "pclk", "osc";
++			status = "disabled";
++		};
++
++		pwm1_6ch_2: pwm@2add2000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x2add2000 0x0 0x1000>;
++			interrupts = <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm1m0_ch2>;
++			clocks = <&cru CLK_PWM1>, <&cru PCLK_PWM1>, <&cru CLK_OSC_PWM1>;
++			clock-names = "pwm", "pclk", "osc";
++			status = "disabled";
++		};
++
++		pwm1_6ch_3: pwm@2add3000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x2add3000 0x0 0x1000>;
++			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm1m0_ch3>;
++			clocks = <&cru CLK_PWM1>, <&cru PCLK_PWM1>, <&cru CLK_OSC_PWM1>;
++			clock-names = "pwm", "pclk", "osc";
++			status = "disabled";
++		};
++
++		pwm1_6ch_4: pwm@2add4000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x2add4000 0x0 0x1000>;
++			interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm1m0_ch4>;
++			clocks = <&cru CLK_PWM1>, <&cru PCLK_PWM1>, <&cru CLK_OSC_PWM1>;
++			clock-names = "pwm", "pclk", "osc";
++			status = "disabled";
++		};
++
++		pwm1_6ch_5: pwm@2add5000 {
++			compatible = "rockchip,rk3576-pwm";
++			reg = <0x0 0x2add5000 0x0 0x1000>;
++			interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
++			#pwm-cells = <3>;
++			pinctrl-names = "active";
++			pinctrl-0 = <&pwm1m0_ch5>;
++			clocks = <&cru CLK_PWM1>, <&cru PCLK_PWM1>, <&cru CLK_OSC_PWM1>;
++			clock-names = "pwm", "pclk", "osc";
++			status = "disabled";
++		};
++
+ 		saradc: adc@2ae00000 {
+ 			compatible = "rockchip,rk3576-saradc", "rockchip,rk3588-saradc";
+ 			reg = <0x0 0x2ae00000 0x0 0x10000>;
