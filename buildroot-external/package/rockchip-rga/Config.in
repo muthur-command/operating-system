@@ -1,0 +1,9 @@
+config BR2_PACKAGE_ROCKCHIP_RGA
+	bool "rockchip-rga"
+	select BR2_PACKAGE_LIBDRM
+	help
+	  Rockchip RGA (Raster Graphic Acceleration) library.
+	  RGA provides hardware-accelerated image processing operations
+	  such as scaling, rotation, color conversion, and blending.
+
+	  https://github.com/rockchip-linux/linux-rga

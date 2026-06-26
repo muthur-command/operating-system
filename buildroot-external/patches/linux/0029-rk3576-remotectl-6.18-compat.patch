@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000029 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] input: remotectl: rockchip_pwm Linux 6.18 API compat
+
+Linux 6.18 renamed from_timer() to timer_container_of(). Remove legacy
+wake_lock_init() call that referenced a non-existent struct member; wakeup
+is already handled via device_init_wakeup() and enable_irq_wake().
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/input/remotectl/rockchip_pwm_remotectl.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/input/remotectl/rockchip_pwm_remotectl.c b/drivers/input/remotectl/rockchip_pwm_remotectl.c
+index 1111111..2222222 100644
+--- a/drivers/input/remotectl/rockchip_pwm_remotectl.c
++++ b/drivers/input/remotectl/rockchip_pwm_remotectl.c
+@@ -16,6 +16,7 @@
+ #include <linux/input.h>
+ #include <linux/workqueue.h>
+ #include <linux/slab.h>
++#include <linux/timer.h>
+ #include <linux/rockchip/rockchip_sip.h>
+ #include "rockchip_pwm_remotectl.h"
+ 
+@@ -368,7 +369,7 @@
+ 
+ static void rk_pwm_remotectl_timer(struct timer_list *t)
+ {
+-	struct rkxx_remotectl_drvdata *ddata = from_timer(ddata, t, timer);
++	struct rkxx_remotectl_drvdata *ddata = timer_container_of(ddata, t, timer);
+ 
+ 	if (ddata->press != ddata->pre_press) {
+ 		ddata->pre_press = 0;
+@@ -972,8 +973,6 @@ static int rk_pwm_probe(struct platform_device *pdev)
+ 	device_init_wakeup(&pdev->dev, 1);
+ 	enable_irq_wake(irq);
+ 	timer_setup(&ddata->timer, rk_pwm_remotectl_timer, 0);
+-	wake_lock_init(&ddata->remotectl_wake_lock,
+-		       WAKE_LOCK_SUSPEND, "rockchip_pwm_remote");
+ 	cpumask_clear(&cpumask);
+ 	cpumask_set_cpu(cpu_id, &cpumask);
+ 	irq_set_affinity_hint(irq, &cpumask);
+-- 
+2.34.1

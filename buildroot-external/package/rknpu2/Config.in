@@ -1,0 +1,23 @@
+config BR2_PACKAGE_RKNPU2
+	bool "rknpu2"
+	help
+	  Rockchip NPU (Neural Processing Unit) driver and runtime.
+	  This package provides the RKNN API for NPU inference on
+	  Rockchip SoCs (RK3576, RK3588, etc.).
+
+	  https://github.com/rockchip-linux/rknpu2
+
+config BR2_PACKAGE_RKNPU2_ARCH
+	string "NPU architecture"
+	default "aarch64"
+	depends on BR2_PACKAGE_RKNPU2
+	help
+	  Target architecture for NPU runtime.
+	  Options: aarch64, armhf
+
+config BR2_PACKAGE_RKNPU2_EXAMPLE
+	bool "Install NPU example"
+	default n
+	depends on BR2_PACKAGE_RKNPU2
+	help
+	  Install the RKNN common test example.

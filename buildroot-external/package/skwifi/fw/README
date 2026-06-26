@@ -1,0 +1,54 @@
+################################################################################
+#
+# SKWIFI Firmware Files
+#
+# This directory should contain firmware files required for the SKW (Seekwave)
+# WiFi/BT module (SV6160/SV6158).
+#
+# IMPORTANT: The Seekwave firmware files are PROPRIETARY and NOT included in the
+# SDK. You must obtain them from Seekwave Electronics directly.
+#
+# How to Obtain Firmware:
+# -----------------------
+# Option 1: Contact Seekwave
+#   Contact Seekwave Electronics to obtain the official firmware package.
+#   Email: contact@seekwave.com (or check official website)
+#
+# Option 2: From LB200 Board Recovery Image
+#   If you have a working LB200 board, the firmware files may be located at:
+#   /lib/firmware/seekwave/ or /vendor/firmware/seekwave/
+#   on the existing system.
+#
+# Required Files for SDIO Interface:
+# -----------------------------------
+# The following firmware files are needed for SDIO mode (LB200 board):
+#   - SWT6652_IRAM_SDIO.bin  (WiFi IRAM firmware)
+#   - SWT6652_DRAM_SDIO.bin  (WiFi DRAM firmware)
+#   - SWT6652_NVM_SDIO.bin   (WiFi NVM calibration data)
+#   - bt_firmware.bin        (Bluetooth firmware)
+#
+# Installation:
+# -------------
+# Copy the firmware files to this directory:
+#   /home/morty/work/share/mc_os/operating-system/buildroot-external/package/skwifi/fw/
+#
+# The SKWIFI package Makefile will install these files to:
+#   /lib/firmware/seekwave/
+#
+# SDK Driver Modules:
+# -------------------
+# The precompiled SKW driver modules from SDK are available in ../driver/:
+#   - skw6316.ko     (SKWIFI core module)
+#   - skwbt.ko      (Bluetooth module)
+#   - skw_sdio_v20.ko (SDIO interface driver)
+#
+################################################################################
+
+# Note: The SDK does not include SKWIFI firmware files. The firmware is
+# proprietary and must be obtained from Seekwave Electronics or from a
+# working LB200 board's recovery/system image.
+#
+# Unlike Realtek or Broadcom WiFi firmware, the Seekwave firmware is not
+# available in open source repositories.
+#
+################################################################################

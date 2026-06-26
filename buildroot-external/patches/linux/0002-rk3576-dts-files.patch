@@ -1,0 +1,1261 @@
+From 9014bec619127640c69ec103484b244149bfcf9c Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Mon, 22 Jun 2026 08:36:38 -0700
+Subject: [PATCH 0002/3] Add RK3576 Neardi LB200 board DTS (mainline) add neardi lb200 dts
+
+Co-authored-by: Cursor <cursoragent@cursor.com>
+---
+ arch/arm64/boot/dts/rockchip/Makefile         |   1 +
+ .../dts/rockchip/rk3576-mc-neardi-lb200.dts   |  65 +++
+ .../rk3576-neardi-lb200-full-typec-phy.dtsi   | 108 +++++
+ .../rockchip/rk3576-neardi-lb200-gmac.dtsi    |  61 +++
+ .../rockchip/rk3576-neardi-lb200-hdmi.dtsi    |  34 ++
+ .../rk3576-neardi-lb200-input-keymap.dtsi     |   7 +
+ .../rk3576-neardi-lb200-misc-devices.dtsi     |  93 +++++
+ .../rk3576-neardi-lb200-sound-ctl.dtsi        |  84 ++++
+ .../rockchip/rk3576-neardi-lb200-wifibt.dtsi  |  42 ++
+ .../dts/rockchip/rk3576-neardi-lb200.dtsi     | 270 ++++++++++++
+ .../arm64/boot/dts/rockchip/rk3576-rk806.dtsi | 395 ++++++++++++++++++
+ 11 files changed, 1160 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3576-mc-neardi-lb200.dts
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-full-typec-phy.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-hdmi.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-input-keymap.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-misc-devices.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-sound-ctl.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi
+ create mode 100755 arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi
+ create mode 100644 arch/arm64/boot/dts/rockchip/rk3576-rk806.dtsi
+
+diff --git a/arch/arm64/boot/dts/rockchip/Makefile b/arch/arm64/boot/dts/rockchip/Makefile
+index ad684e3..e00f30a 100644
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -279,3 +279,4 @@ rk3588-rock-5b-pcie-srns-dtbs := rk3588-rock-5b.dtb \
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-tiger-haikou-haikou-video-demo.dtb
+ rk3588-tiger-haikou-haikou-video-demo-dtbs := rk3588-tiger-haikou.dtb \
+ 	rk3588-tiger-haikou-video-demo.dtbo
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3576-mc-neardi-lb200.dtb
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-mc-neardi-lb200.dts b/arch/arm64/boot/dts/rockchip/rk3576-mc-neardi-lb200.dts
+new file mode 100644
+index 0000000..abd1ebc
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-mc-neardi-lb200.dts
+@@ -0,0 +1,65 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright (c) 2024 Neardi Inc.
++ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
++ *
++ * Neardi RK3576 LB200 Board - mainline kernel 6.18+
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/usb/pd.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++#include <dt-bindings/soc/rockchip,vop2.h>
++#include "rk3576.dtsi"
++#include "rk3576-rk806.dtsi"
++#include "rk3576-neardi-lb200.dtsi"
++#include "rk3576-neardi-lb200-gmac.dtsi"
++#include "rk3576-neardi-lb200-hdmi.dtsi"
++#include "rk3576-neardi-lb200-full-typec-phy.dtsi"
++#include "rk3576-neardi-lb200-wifibt.dtsi"
++#include "rk3576-neardi-lb200-misc-devices.dtsi"
++#include "rk3576-neardi-lb200-sound-ctl.dtsi"
++
++/ {
++	model = "Rockchip RK3576 Neardi LB200 Board";
++	compatible = "rockchip,rk3576-evb1-v10", "rockchip,rk3576", "neardi,rk3576-lb200";
++
++	aliases {
++		ethernet0 = &gmac0;
++		ethernet1 = &gmac1;
++	};
++
++	chosen {
++		stdout-path = "serial2:1500000n8";
++	};
++
++	hdmi-con {
++		compatible = "hdmi-connector";
++		type = "a";
++
++		port {
++			hdmi_con_in: endpoint {
++				remote-endpoint = <&hdmi_out_con>;
++			};
++		};
++	};
++};
++
++&hdmi_out {
++	hdmi_out_con: endpoint {
++		remote-endpoint = <&hdmi_con_in>;
++	};
++};
++
++&uart2 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart2m0_xfer>;
++};
++
++&rng {
++	status = "okay";
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-full-typec-phy.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-full-typec-phy.dtsi
+new file mode 100755
+index 0000000..ac0887e
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-full-typec-phy.dtsi
+@@ -0,0 +1,108 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 USB-C / Type-C PHY (mainline compatible)
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++#include <dt-bindings/usb/pd.h>
++
++/ {
++	vbus5v0_typec: vbus5v0-typec {
++		compatible = "regulator-fixed";
++		regulator-name = "vbus5v0_typec";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		enable-active-high;
++		gpio = <&gpio2 RK_PB6 GPIO_ACTIVE_HIGH>;
++		vin-supply = <&vcc5v0_device>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&usb_otg0_pwren>;
++	};
++};
++
++&i2c2 {
++	status = "okay";
++
++	usbc0: fusb302@22 {
++		compatible = "fcs,fusb302";
++		reg = <0x22>;
++		interrupt-parent = <&gpio0>;
++		interrupts = <RK_PB4 IRQ_TYPE_LEVEL_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&usbc0_int>;
++		vbus-supply = <&vbus5v0_typec>;
++		status = "okay";
++
++		port {
++			usbc0_role_sw: endpoint {
++				remote-endpoint = <&usb_drd0_role_switch>;
++			};
++		};
++
++		usb_con: connector {
++			compatible = "usb-c-connector";
++			label = "USB-C";
++			data-role = "dual";
++			power-role = "dual";
++			try-power-role = "sink";
++			op-sink-microwatt = <1000000>;
++			sink-pdos =
++				<PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
++			source-pdos =
++				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
++		};
++	};
++
++	hym8563: hym8563@51 {
++		compatible = "haoyu,hym8563";
++		reg = <0x51>;
++		clock-output-names = "hym8563";
++		interrupt-parent = <&gpio0>;
++		interrupts = <RK_PA5 IRQ_TYPE_LEVEL_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&hym8563_int>;
++		wakeup-source;
++		#clock-cells = <0>;
++	};
++};
++
++&usb_drd0_dwc3 {
++	dr_mode = "otg";
++	usb-role-switch;
++	status = "okay";
++
++	port {
++		usb_drd0_role_switch: endpoint {
++			remote-endpoint = <&usbc0_role_sw>;
++		};
++	};
++};
++
++&usbdp_phy {
++	rockchip,dp-lane-mux = <2 3>;
++	status = "okay";
++};
++
++&u2phy0_otg {
++	phy-supply = <&vbus5v0_typec>;
++	status = "okay";
++};
++
++&pinctrl {
++	typec_phy {
++		usbc0_int: usbc0-int {
++			rockchip,pins = <0 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++
++		usb_otg0_pwren: usb-otg0-pwren {
++			rockchip,pins = <2 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
++	hym8563 {
++		hym8563_int: hym8563-int {
++			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi
+new file mode 100755
+index 0000000..0282646
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi
+@@ -0,0 +1,61 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 dual GMAC with YT8521 PHY
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++&gmac0 {
++	phy-mode = "rgmii-rxid";
++	clock_in_out = "output";
++	snps,reset-gpio = <&gpio2 RK_PB3 GPIO_ACTIVE_LOW>;
++	snps,reset-active-low;
++	snps,reset-delays-us = <0 20000 100000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&eth0m0_miim
++		     &eth0m0_tx_bus2
++		     &eth0m0_rx_bus2
++		     &eth0m0_rgmii_clk
++		     &eth0m0_rgmii_bus
++		     &ethm0_clk0_25m_out>;
++	tx_delay = <0x21>;
++	phy-handle = <&rgmii_phy0>;
++	status = "okay";
++};
++
++&gmac1 {
++	phy-mode = "rgmii-rxid";
++	clock_in_out = "output";
++	snps,reset-gpio = <&gpio2 RK_PB4 GPIO_ACTIVE_LOW>;
++	snps,reset-active-low;
++	snps,reset-delays-us = <0 20000 100000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&eth1m0_miim
++		     &eth1m0_tx_bus2
++		     &eth1m0_rx_bus2
++		     &eth1m0_rgmii_clk
++		     &eth1m0_rgmii_bus
++		     &ethm0_clk1_25m_out>;
++	tx_delay = <0x20>;
++	phy-handle = <&rgmii_phy1>;
++	status = "okay";
++};
++
++&mdio0 {
++	rgmii_phy0: ethernet-phy@0 {
++		compatible = "ethernet-phy-ieee802.3-c22";
++		/* YT8521 needs broadcast address 0x0 */
++		reg = <0x0>;
++		clocks = <&cru REFCLKO25M_GMAC0_OUT>;
++	};
++};
++
++&mdio1 {
++	rgmii_phy1: ethernet-phy@0 {
++		compatible = "ethernet-phy-ieee802.3-c22";
++		/* YT8521 needs broadcast address 0x0 */
++		reg = <0x0>;
++		clocks = <&cru REFCLKO25M_GMAC1_OUT>;
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-hdmi.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-hdmi.dtsi
+new file mode 100755
+index 0000000..a22da95
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-hdmi.dtsi
+@@ -0,0 +1,34 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 HDMI display (mainline compatible)
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++#include <dt-bindings/soc/rockchip,vop2.h>
++
++&hdmi {
++	status = "okay";
++	enable-gpios = <&gpio4 RK_PC6 GPIO_ACTIVE_HIGH>;
++};
++
++&hdmi_in {
++	hdmi_in_vp0: endpoint {
++		remote-endpoint = <&vp0_out_hdmi>;
++	};
++};
++
++&hdptxphy {
++	status = "okay";
++};
++
++&hdmi_sound {
++	status = "okay";
++};
++
++&vp0 {
++	vp0_out_hdmi: endpoint@ROCKCHIP_VOP2_EP_HDMI0 {
++		reg = <ROCKCHIP_VOP2_EP_HDMI0>;
++		remote-endpoint = <&hdmi_in_vp0>;
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-input-keymap.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-input-keymap.dtsi
+new file mode 100755
+index 0000000..ce163ac
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-input-keymap.dtsi
+@@ -0,0 +1,7 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 IR remote keymap
++ *
++ * Disabled on mainline: rockchip,remotectl-pwm requires BSP PWM nodes
++ * (pwm0_2ch_0) not present in mainline rk3576.dtsi.
++ */
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-misc-devices.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-misc-devices.dtsi
+new file mode 100755
+index 0000000..2d1b28b
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-misc-devices.dtsi
+@@ -0,0 +1,93 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 misc devices (mainline compatible)
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++/ {
++	pcie_dev_pwren: pcie-dev-pwren {
++		compatible = "regulator-fixed";
++		regulator-name = "Pcie_Pwren";
++		regulator-boot-on;
++		enable-active-high;
++		regulator-always-on;
++		gpio = <&gpio0 RK_PD3 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pwren_pcie>;
++	};
++
++	vcc_lte_en: vcc-lte-en {
++		compatible = "regulator-fixed";
++		regulator-name = "Lte_Pwren";
++		regulator-boot-on;
++		enable-active-high;
++		regulator-always-on;
++		gpio = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pwren_lte>;
++	};
++
++	leds: leds {
++		compatible = "gpio-leds";
++
++		work_led: work {
++			gpios = <&gpio2 RK_PD7 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "heartbeat";
++		};
++
++		work1_led: work1 {
++			gpios = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "heartbeat";
++		};
++	};
++};
++
++&pcie0 {
++	reset-gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_HIGH>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pcie_rst>;
++	status = "okay";
++};
++
++&uart5 {
++	status = "okay";
++	linux,rs485-enabled-at-boot-time;
++	rs485-rts-delay = <0 0>;
++	rs485-rx-during-tx;
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart5m2_xfer>;
++};
++
++&sfc1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&fspi1m1_pins &fspi1m1_csn0>;
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <10000000>;
++		spi-rx-bus-width = <4>;
++		spi-tx-bus-width = <1>;
++	};
++};
++
++&pinctrl {
++	lte {
++		pwren_lte: pwren-lte {
++			rockchip,pins = <0 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
++	pcie {
++		pcie_rst: pcie-rst {
++			rockchip,pins = <2 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		pwren_pcie: pwren-pcie {
++			rockchip,pins = <0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-sound-ctl.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-sound-ctl.dtsi
+new file mode 100755
+index 0000000..52464be
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-sound-ctl.dtsi
+@@ -0,0 +1,84 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 ES8388 audio (mainline compatible)
++ */
++
++#include <dt-bindings/clock/rockchip,rk3576-cru.h>
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++/ {
++	es8388_sound: es8388-sound {
++		status = "okay";
++		compatible = "rockchip,multicodecs-card";
++		rockchip,card-name = "rockchip-es8388";
++		hp-det-gpio = <&gpio2 RK_PB7 GPIO_ACTIVE_HIGH>;
++		io-channels = <&saradc 3>;
++		io-channel-names = "adc-detect";
++		keyup-threshold-microvolt = <1800000>;
++		poll-interval = <100>;
++		spk-con-gpio = <&gpio2 RK_PA7 GPIO_ACTIVE_LOW>;
++		hp-con-gpio = <&gpio2 RK_PA6 GPIO_ACTIVE_HIGH>;
++		rockchip,pre-power-on-delay-ms = <30>;
++		rockchip,post-power-down-delay-ms = <40>;
++		rockchip,format = "i2s";
++		rockchip,mclk-fs = <256>;
++		rockchip,cpu = <&sai1>;
++		rockchip,codec = <&es8388>;
++		rockchip,audio-routing =
++			"Headphone", "LOUT1",
++			"Headphone", "ROUT1",
++			"Speaker", "LOUT2",
++			"Speaker", "ROUT2",
++			"Headphone", "Headphone Power",
++			"Headphone", "Headphone Power",
++			"Speaker", "Speaker Power",
++			"Speaker", "Speaker Power",
++			"LINPUT1", "Main Mic",
++			"LINPUT2", "Main Mic",
++			"RINPUT1", "Headset Mic",
++			"RINPUT2", "Headset Mic";
++		pinctrl-names = "default";
++		pinctrl-0 = <&hp_det>;
++		play-pause-key {
++			label = "playpause";
++			linux,code = <KEY_PLAYPAUSE>;
++			press-threshold-microvolt = <2000>;
++		};
++	};
++};
++
++&i2c3 {
++	status = "okay";
++
++	es8388: es8388@10 {
++		status = "okay";
++		#sound-dai-cells = <0>;
++		compatible = "everest,es8388", "everest,es8323";
++		reg = <0x10>;
++		clocks = <&cru MCLK_SAI1_8CH>;
++		clock-names = "mclk";
++		assigned-clocks = <&cru MCLK_SAI1_8CH>;
++		assigned-clock-rates = <12288000>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&sai1m0_mclk>;
++	};
++};
++
++&sai1 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&sai1m0_lrck
++		     &sai1m0_sclk
++		     &sai1m0_sdi0
++		     &sai1m0_sdo2>;
++};
++
++&pinctrl {
++	headphone {
++		hp_det: hp-det {
++			rockchip,pins = <2 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi
+new file mode 100755
+index 0000000..491d160
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi
+@@ -0,0 +1,42 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Neardi LB200 Seekwave SDIO WiFi
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++/ {
++	sdio_pwrseq: sdio-pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		pinctrl-names = "default";
++		pinctrl-0 = <&wifi_poweren_gpio>;
++		post-power-on-delay-ms = <200>;
++		reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
++	};
++};
++
++&sdio {
++	max-frequency = <200000000>;
++	no-sd;
++	no-mmc;
++	bus-width = <4>;
++	disable-wp;
++	cap-sd-highspeed;
++	cap-sdio-irq;
++	keep-power-in-suspend;
++	mmc-pwrseq = <&sdio_pwrseq>;
++	non-removable;
++	pinctrl-names = "default";
++	pinctrl-0 = <&sdmmc1m0_bus4 &sdmmc1m0_clk &sdmmc1m0_cmd>;
++	sd-uhs-sdr104;
++	status = "okay";
++};
++
++&pinctrl {
++	wireless-wlan {
++		wifi_poweren_gpio: wifi-poweren-gpio {
++			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi
+new file mode 100755
+index 0000000..57e25ab
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi
+@@ -0,0 +1,270 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright (c) 2024 Neardi Inc.
++ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
++ *
++ * Neardi LB200 board common configuration (mainline compatible)
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++/ {
++	adc_keys: adc-keys {
++		compatible = "adc-keys";
++		io-channels = <&saradc 1>;
++		io-channel-names = "buttons";
++		keyup-threshold-microvolt = <1800000>;
++		poll-interval = <100>;
++
++		vol-up-key {
++			label = "volume up";
++			linux,code = <KEY_VOLUMEUP>;
++			press-threshold-microvolt = <17000>;
++		};
++
++		vol-down-key {
++			label = "volume down";
++			linux,code = <KEY_VOLUMEDOWN>;
++			press-threshold-microvolt = <417000>;
++		};
++
++		menu-key {
++			label = "menu";
++			linux,code = <KEY_MENU>;
++			press-threshold-microvolt = <890000>;
++		};
++
++		back-key {
++			label = "back";
++			linux,code = <KEY_BACK>;
++			press-threshold-microvolt = <1235000>;
++		};
++	};
++
++	vcc12v_dcin: vcc12v-dcin {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc12v_dcin";
++		regulator-always-on;
++		regulator-boot-on;
++		regulator-min-microvolt = <12000000>;
++		regulator-max-microvolt = <12000000>;
++	};
++
++	vcc_sys: vcc5v0-sys {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_sys";
++		regulator-always-on;
++		regulator-boot-on;
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		vin-supply = <&vcc12v_dcin>;
++	};
++
++	vcc5v0_device: vcc5v0-device {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc5v0_device";
++		regulator-always-on;
++		regulator-boot-on;
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		vin-supply = <&vcc12v_dcin>;
++	};
++
++	vcc_2v0_pldo_s3: vcc-2v0-pldo-s3 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_2v0_pldo_s3";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <2000000>;
++		regulator-max-microvolt = <2000000>;
++		vin-supply = <&vcc_sys>;
++	};
++
++	vcc_1v1_nldo_s3: vcc-1v1-nldo-s3 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_1v1_nldo_s3";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <1100000>;
++		regulator-max-microvolt = <1100000>;
++		vin-supply = <&vcc_sys>;
++	};
++
++	vcc3v3_rtc_s5: vcc3v3-rtc-s5 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc3v3_rtc_s5";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		vin-supply = <&vcc_sys>;
++	};
++
++	vcc_1v8_s0: vcc-1v8-s0 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_1v8_s0";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		vin-supply = <&vcc_1v8_s3>;
++	};
++
++	vcc_3v3_s0: vcc-3v3-s0 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_3v3_s0";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		vin-supply = <&vcc_3v3_s3>;
++	};
++
++	vcc_ufs_s0: vcc-ufs-s0 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_ufs_s0";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		vin-supply = <&vcc_sys>;
++	};
++
++	vcc1v8_ufs_vccq2_s0: vcc1v8-ufs-vccq2-s0 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc1v8_ufs_vccq2_s0";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		vin-supply = <&vcc_1v8_s3>;
++	};
++
++	vcc1v2_ufs_vccq_s0: vcc1v2-ufs-vccq-s0 {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc1v2_ufs_vccq_s0";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <1200000>;
++		regulator-max-microvolt = <1200000>;
++		vin-supply = <&vcc_sys>;
++	};
++
++	vcc5v0_host: vcc5v0-host {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc5v0_host";
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		enable-active-high;
++		gpio = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
++		vin-supply = <&vcc5v0_device>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&usb_host_pwren>;
++	};
++};
++
++&cpu_l0 {
++	cpu-supply = <&vdd_cpu_lit_s0>;
++};
++
++&cpu_b0 {
++	cpu-supply = <&vdd_cpu_big_s0>;
++};
++
++&combphy0_ps {
++	status = "okay";
++};
++
++&combphy1_psu {
++	status = "okay";
++};
++
++&gpu {
++	mali-supply = <&vdd_gpu_s0>;
++	status = "okay";
++};
++
++&saradc {
++	vref-supply = <&vcca_1v8_s0>;
++	status = "okay";
++};
++
++&sdhci {
++	bus-width = <8>;
++	full-pwr-cycle-in-suspend;
++	max-frequency = <200000000>;
++	mmc-hs400-1_8v;
++	mmc-hs400-enhanced-strobe;
++	no-sdio;
++	no-sd;
++	non-removable;
++	status = "okay";
++};
++
++&sdmmc {
++	bus-width = <4>;
++	cap-sd-highspeed;
++	cd-gpios = <&gpio4 RK_PC6 GPIO_ACTIVE_LOW>;
++	disable-wp;
++	max-frequency = <200000000>;
++	no-sdio;
++	no-mmc;
++	pinctrl-names = "default";
++	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_det &sdmmc0_bus4>;
++	sd-uhs-sdr104;
++	vqmmc-supply = <&vccio_sd_s0>;
++	status = "okay";
++};
++
++&tsadc {
++	status = "okay";
++};
++
++&u2phy0 {
++	status = "okay";
++};
++
++&u2phy1 {
++	status = "okay";
++};
++
++&u2phy0_otg {
++	status = "okay";
++};
++
++&u2phy1_otg {
++	phy-supply = <&vcc5v0_host>;
++	status = "okay";
++};
++
++&ufshc {
++	status = "okay";
++	vcc-supply = <&vcc_ufs_s0>;
++	vccq-supply = <&vcc1v2_ufs_vccq_s0>;
++	vccq2-supply = <&vcc1v8_ufs_vccq2_s0>;
++};
++
++&usb_drd1_dwc3 {
++	dr_mode = "host";
++	status = "okay";
++};
++
++&vop {
++	status = "okay";
++};
++
++&vop_mmu {
++	status = "okay";
++};
++
++&pinctrl {
++	usb {
++		usb_host_pwren: usb-host-pwren {
++			rockchip,pins = <0 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-rk806.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-rk806.dtsi
+new file mode 100644
+index 0000000..a5190c4
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/rk3576-rk806.dtsi
+@@ -0,0 +1,395 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
++ *
++ */
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/pinctrl/rockchip.h>
++
++&i2c1 {
++	status = "okay";
++
++	rk806: pmic@23 {
++		compatible = "rockchip,rk806";
++		reg = <0x23>;
++
++		interrupt-parent = <&gpio0>;
++		interrupts = <6 IRQ_TYPE_LEVEL_LOW>;
++		gpio-controller;
++		#gpio-cells = <2>;
++
++		pinctrl-names = "default", "pmic-power-off";
++		pinctrl-0 = <&pmic_pins>, <&rk806_dvs1_null>, <&rk806_dvs2_null>, <&rk806_dvs3_null>;
++		pinctrl-1 = <&rk806_dvs1_pwrdn>;
++		system-power-controller;
++
++		/* 2800mv-3500mv */
++		low_voltage_threshold = <3000>;
++		/* 2700mv-3400mv */
++		shutdown_voltage_threshold = <2700>;
++		/* 140 160 */
++		shutdown_temperture_threshold = <160>;
++		hotdie_temperture_threshold = <115>;
++
++		/* 0: restart PMU;
++		 * 1: reset all the power off reset registers,
++		 *    forcing the state to switch to ACTIVE mode;
++		 * 2: Reset all the power off reset registers,
++		 *    forcing the state to switch to ACTIVE mode,
++		 *    and simultaneously pull down the RESETB PIN for 5mS before releasing
++		 */
++		pmic-reset-func = <1>;
++		/* buck5 external feedback resister disable */
++		buck5-feedback-disable;
++
++		vcc1-supply = <&vcc_sys>;
++		vcc2-supply = <&vcc_sys>;
++		vcc3-supply = <&vcc_sys>;
++		vcc4-supply = <&vcc_sys>;
++		vcc5-supply = <&vcc_sys>;
++		vcc6-supply = <&vcc_sys>;
++		vcc7-supply = <&vcc_sys>;
++		vcc8-supply = <&vcc_sys>;
++		vcc9-supply = <&vcc_sys>;
++		vcc10-supply = <&vcc_sys>;
++		vcc11-supply = <&vcc_2v0_pldo_s3>;
++		vcc12-supply = <&vcc_sys>;
++		vcc13-supply = <&vcc_1v1_nldo_s3>;
++		vcc14-supply = <&vcc_1v1_nldo_s3>;
++		vcca-supply = <&vcc_sys>;
++
++		pwrkey {
++			status = "okay";
++		};
++
++		pinctrl_rk806: pinctrl_rk806 {
++			gpio-controller;
++			#gpio-cells = <2>;
++
++			rk806_dvs1_null: rk806_dvs1_null {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun0";
++			};
++
++			rk806_dvs1_slp: rk806_dvs1_slp {
++				pins = "gpio_pwrctrl1";
++				function = "pin_fun1";
++			};
++
++			rk806_dvs1_pwrdn: rk806_dvs1_pwrdn {
++				pins = "gpio_pwrctrl1";
++				function = "pin_fun2";
++			};
++
++			rk806_dvs1_rst: rk806_dvs1_rst {
++				pins = "gpio_pwrctrl1";
++				function = "pin_fun3";
++			};
++
++			rk806_dvs2_null: rk806_dvs2_null {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun0";
++			};
++
++			rk806_dvs2_slp: rk806_dvs2_slp {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun1";
++			};
++
++			rk806_dvs2_pwrdn: rk806_dvs2_pwrdn {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun2";
++			};
++
++			rk806_dvs2_rst: rk806_dvs2_rst {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun3";
++			};
++
++			rk806_dvs2_dvs: rk806_dvs2_dvs {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun4";
++			};
++
++			rk806_dvs2_gpio: rk806_dvs2_gpio {
++				pins = "gpio_pwrctrl2";
++				function = "pin_fun5";
++			};
++
++			rk806_dvs3_null: rk806_dvs3_null {
++				pins = "gpio_pwrctrl3";
++				function = "pin_fun0";
++			};
++
++			rk806_dvs3_slp: rk806_dvs3_slp {
++				pins = "gpio_pwrctrl3";
++				function = "pin_fun1";
++			};
++
++			rk806_dvs3_pwrdn: rk806_dvs3_pwrdn {
++				pins = "gpio_pwrctrl3";
++				function = "pin_fun2";
++			};
++
++			rk806_dvs3_rst: rk806_dvs3_rst {
++				pins = "gpio_pwrctrl3";
++				function = "pin_fun3";
++			};
++
++			rk806_dvs3_dvs: rk806_dvs3_dvs {
++				pins = "gpio_pwrctrl3";
++				function = "pin_fun4";
++			};
++
++			rk806_dvs3_gpio: rk806_dvs3_gpio {
++				pins = "gpio_pwrctrl3";
++				function = "pin_fun5";
++			};
++		};
++
++		regulators {
++			vdd_cpu_big_s0: DCDC_REG1 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-init-microvolt = <850000>;
++				regulator-min-microvolt = <550000>;
++				regulator-max-microvolt = <950000>;
++				regulator-ramp-delay = <12500>;
++				regulator-name = "vdd_cpu_big_s0";
++				regulator-enable-ramp-delay = <400>;
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdd_npu_s0: DCDC_REG2 {
++				regulator-boot-on;
++				regulator-min-microvolt = <550000>;
++				regulator-max-microvolt = <950000>;
++				regulator-ramp-delay = <12500>;
++				regulator-name = "vdd_npu_s0";
++				regulator-enable-ramp-delay = <400>;
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdd_cpu_lit_s0: DCDC_REG3 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-init-microvolt = <850000>;
++				regulator-min-microvolt = <550000>;
++				regulator-max-microvolt = <950000>;
++				regulator-ramp-delay = <12500>;
++				regulator-name = "vdd_cpu_lit_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++					regulator-suspend-microvolt = <750000>;
++				};
++			};
++
++			vcc_3v3_s3: DCDC_REG4 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vcc_3v3_s3";
++				regulator-state-mem {
++					regulator-on-in-suspend;
++					regulator-suspend-microvolt = <3300000>;
++				};
++			};
++
++			vdd_gpu_s0: DCDC_REG5 {
++				regulator-boot-on;
++				regulator-init-microvolt = <750000>;
++				regulator-min-microvolt = <550000>;
++				regulator-max-microvolt = <900000>;
++				regulator-ramp-delay = <12500>;
++				regulator-name = "vdd_gpu_s0";
++				regulator-enable-ramp-delay = <400>;
++				regulator-state-mem {
++					regulator-off-in-suspend;
++					regulator-suspend-microvolt = <850000>;
++				};
++			};
++
++			vddq_ddr_s0: DCDC_REG6 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-name = "vddq_ddr_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdd_logic_s0: vdd_log_mem_s0: DCDC_REG7 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-init-microvolt = <750000>;
++				regulator-min-microvolt = <550000>;
++				regulator-max-microvolt = <800000>;
++				regulator-name = "vdd_logic_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vcc_1v8_s3: DCDC_REG8 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-name = "vcc_1v8_s3";
++				regulator-state-mem {
++					regulator-on-in-suspend;
++					regulator-suspend-microvolt = <1800000>;
++				};
++			};
++
++			vdd2_ddr_s3: DCDC_REG9 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-name = "vdd2_ddr_s3";
++				regulator-state-mem {
++					regulator-on-in-suspend;
++				};
++			};
++
++			vdd_ddr_s0: DCDC_REG10 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <550000>;
++				regulator-max-microvolt = <1200000>;
++				regulator-name = "vdd_ddr_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vcca_1v8_s0: PLDO_REG1 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-name = "vcca_1v8_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vcca1v8_pldo2_s0: PLDO_REG2 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-name = "vcca1v8_pldo2_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdda_1v2_s0: PLDO_REG3 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1200000>;
++				regulator-max-microvolt = <1200000>;
++				regulator-name = "vdda_1v2_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vcca_3v3_s0: PLDO_REG4 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vcca_3v3_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vccio_sd_s0: PLDO_REG5 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vccio_sd_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vcca1v8_pldo6_s3: PLDO_REG6 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-name = "vcca1v8_pldo6_s3";
++				regulator-state-mem {
++					regulator-on-in-suspend;
++					regulator-suspend-microvolt = <1800000>;
++				};
++			};
++
++			vdd_0v75_s3: NLDO_REG1 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <750000>;
++				regulator-max-microvolt = <750000>;
++				regulator-name = "vdd_0v75_s3";
++				regulator-state-mem {
++					regulator-on-in-suspend;
++					regulator-suspend-microvolt = <750000>;
++				};
++			};
++
++			vdda_ddr_pll_s0: NLDO_REG2 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <850000>;
++				regulator-max-microvolt = <850000>;
++				regulator-name = "vdda_ddr_pll_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdda0v75_hdmi_s0: NLDO_REG3 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <837500>;
++				regulator-max-microvolt = <837500>;
++				regulator-name = "vdda0v75_hdmi_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdda_0v85_s0: NLDO_REG4 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <850000>;
++				regulator-max-microvolt = <850000>;
++				regulator-name = "vdda_0v85_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
++			vdda_0v75_s0: NLDO_REG5 {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <750000>;
++				regulator-max-microvolt = <750000>;
++				regulator-name = "vdda_0v75_s0";
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++		};
++	};
++};
+-- 
+2.34.1
+

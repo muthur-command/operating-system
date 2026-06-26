@@ -1,0 +1,26 @@
+config BR2_PACKAGE_SKWIFI
+    bool "skwifi - Seekwave WiFi/BT driver"
+    help
+      Seekwave SV6160 WiFi/BT driver for Rockchip platforms.
+
+      This package provides the SKW (Seekwave) WiFi and Bluetooth
+      driver for SV6160/SWT6652 modules commonly used on Rockchip
+      based boards.
+
+      Note: This driver requires kernel 6.1 or later with cfg80211
+      and mac80211 support.
+
+comment "skwifi needs a Linux kernel to be built"
+    depends on !BR2_LINUX_KERNEL
+
+if BR2_PACKAGE_SKWIFI
+
+# SKW WiFi firmware files
+config BR2_PACKAGE_SKWIFI_FIRMWARE
+    bool "Include SKW firmware files"
+    default y
+    help
+      Include SKW WiFi/BT firmware files in the rootfs.
+      These files are required for the WiFi module to operate.
+
+endif

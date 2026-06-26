@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000033 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] drm: rknpu: add vmalloc.h for vmap/vunmap
+
+After replacing version_compat_defs.h with mm.h, vmap/vunmap/VM_MAP
+are no longer pulled in transitively. Include linux/vmalloc.h directly.
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/rknpu/rknpu_gem.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/rknpu/rknpu_gem.c b/drivers/rknpu/rknpu_gem.c
+index 1111111..2222222 100644
+--- a/drivers/rknpu/rknpu_gem.c
++++ b/drivers/rknpu/rknpu_gem.c
+@@ -16,6 +16,7 @@
+ #include <linux/iommu.h>
+ #include <linux/version.h>
+ #include <linux/mm.h>
++#include <linux/vmalloc.h>
+ #include <asm/cacheflush.h>
+ 
+ #if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
+-- 
+2.34.1

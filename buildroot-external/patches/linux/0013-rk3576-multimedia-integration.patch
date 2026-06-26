@@ -1,0 +1,643 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Mon, 23 Jun 2026 12:00:00 +0800
+Subject: [PATCH] rk3576-multimedia-integration
+
+diff -ruN a/arch/arm64/boot/dts/rockchip/rk3576.dtsi b/arch/arm64/boot/dts/rockchip/rk3576.dtsi
+--- a/arch/arm64/boot/dts/rockchip/rk3576.dtsi	2026-06-23 04:59:00.478983687 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576.dtsi	2026-06-23 06:05:43.778611523 -0700
+@@ -660,7 +660,7 @@
+ 			     <GIC_PPI 10 IRQ_TYPE_LEVEL_LOW>;
+ 	};
+ 
+-	soc {
++	soc: soc {
+ 		compatible = "simple-bus";
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+@@ -2906,3 +2906,4 @@
+ };
+ 
+ #include "rk3576-pinctrl.dtsi"
++#include "rk3576-multimedia.dtsi"
+diff -ruN a/arch/arm64/boot/dts/rockchip/rk3576-multimedia.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-multimedia.dtsi
+--- a/arch/arm64/boot/dts/rockchip/rk3576-multimedia.dtsi	1969-12-31 16:00:00.000000000 -0800
++++ b/arch/arm64/boot/dts/rockchip/rk3576-multimedia.dtsi	2026-06-23 04:55:27.132093202 -0700
+@@ -0,0 +1,477 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * RK3576 multimedia / NPU nodes (Rockchip BSP)
++ */
++#include <dt-bindings/clock/rockchip,rk3576-cru.h>
++
++/ {
++	mpp_srv: mpp-srv {
++		compatible = "rockchip,mpp-service";
++		rockchip,taskqueue-count = <6>;
++		rockchip,resetgroup-count = <2>;
++		status = "disabled";
++	};
++
++	rkvenc_ccu: rkvenc-ccu {
++		compatible = "rockchip,rkv-encoder-rk3576-ccu", "rockchip,rkv-encoder-v2-ccu";
++		status = "disabled";
++	};
++
++};
++
++&otp {
++		npu_opp_info: npu-opp-info@42 {
++			reg = <0x42 0x6>;
++		};
++};
++
++&soc {
++	npu_pvtpll: syscon@27270000 {
++		compatible = "rockchip,rk3576-npu-pvtpll", "syscon";
++		reg = <0x0 0x27270000 0x0 0x1000>;
++	};
++
++	rknpu: npu@27700000 {
++		compatible = "rockchip,rk3576-rknpu";
++		reg = <0x0 0x27700000 0x0 0x8000>,
++		      <0x0 0x27708000 0x0 0x8000>;
++		interrupts = <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>,
++			     <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "npu0_irq", "npu1_irq";
++		clocks = <&scmi_clk SCMI_CLK_RKNN_DSU0>, <&cru ACLK_RKNN0>, <&cru ACLK_RKNN1>, <&cru HCLK_RKNN_ROOT>,
++			 <&cru ACLK_RKNN_CBUF>, <&cru HCLK_RKNN_CBUF>;
++		clock-names = "clk_npu", "aclk0", "aclk1", "hclk_root",
++			      "aclk_cbuf", "hclk_cbuf";
++		assigned-clocks = <&cru CLK_RKNN_DSU0>;
++		assigned-clock-rates = <198000000>;
++		resets = <&cru SRST_A_RKNN0>, <&cru SRST_A_RKNN1>,
++			 <&cru SRST_A_RKNN_CBUF>, <&cru SRST_H_RKNN_CBUF>;
++		reset-names = "srst_a0", "srst_a1",
++			      "srst_a_cbuf", "srst_h_cbuf";
++		power-domains = <&power RK3576_PD_NPU0>, <&power RK3576_PD_NPU1>;
++		power-domain-names = "npu0", "npu1";
++		operating-points-v2 = <&npu_opp_table>;
++		iommus = <&rknpu_mmu>;
++		#cooling-cells = <2>;
++		dynamic-power-coefficient = <2570>;
++		status = "disabled";
++	};
++
++	npu_opp_table: npu-opp-table {
++		compatible = "operating-points-v2";
++
++		nvmem-cells = <&npu_leakage>, <&npu_opp_info>;
++		nvmem-cell-names = "leakage", "opp-info";
++
++		rockchip,pvtm-voltage-sel = <
++			0	719	0
++			720	739	1
++			740	759	2
++			760	779	3
++			780	799	4
++			800	819	5
++			820	839	6
++			840	859	7
++			860	879	8
++			880	899	9
++			900	9999	10
++		>;
++		rockchip,pvtm-low-len-sel = <0>;
++		rockchip,pvtm-pvtpll;
++		rockchip,pvtpll = <&npu_pvtpll>;
++		rockchip,pvtm-offset = <0x54>;
++		rockchip,pvtm-sample-time = <1100>;
++		rockchip,pvtm-freq = <800000>;
++		rockchip,pvtm-volt = <750000>;
++		rockchip,pvtm-ref-temp = <35>;
++		rockchip,pvtm-temp-prop = <0 0>;
++		rockchip,pvtm-thermal-zone = "npu-thermal";
++
++		rockchip,grf = <&npu_grf>;
++		volt-mem-read-margin = <
++			855000	1
++			765000	2
++			675000	3
++			495000	4
++		>;
++		intermediate-threshold-freq = <300000>;
++		rockchip,opp-clocks = <&cru ACLK_RKNN_CBUF>,
++				      <&cru HCLK_RKNN_CBUF>,
++				      <&cru PCLK_NPUTOP_ROOT>;
++
++		rockchip,temp-hysteresis = <5000>;
++		rockchip,low-temp = <15000>;
++		rockchip,low-temp-min-volt = <750000>;
++
++		opp-300000000 {
++			opp-hz = /bits/ 64 <300000000>;
++			opp-microvolt = <725000 725000 875000>;
++		};
++		opp-400000000 {
++			opp-hz = /bits/ 64 <400000000>;
++			opp-microvolt = <725000 725000 875000>;
++		};
++		opp-500000000 {
++			opp-hz = /bits/ 64 <500000000>;
++			opp-microvolt = <725000 725000 875000>;
++			opp-microvolt-L0 = <737500 737500 875000>;
++			opp-microvolt-L1 = <737500 737500 875000>;
++		};
++		opp-600000000 {
++			opp-hz = /bits/ 64 <600000000>;
++			opp-microvolt = <725000 725000 875000>;
++			opp-microvolt-L0 = <737500 737500 875000>;
++			opp-microvolt-L1 = <737500 737500 875000>;
++		};
++		opp-700000000 {
++			opp-hz = /bits/ 64 <700000000>;
++			opp-microvolt = <725000 725000 875000>;
++			opp-microvolt-L0 = <775000 775000 875000>;
++			opp-microvolt-L1 = <775000 775000 875000>;
++			opp-microvolt-L2 = <762500 762500 875000>;
++			opp-microvolt-L3 = <762500 762500 875000>;
++			opp-microvolt-L4 = <750000 750000 875000>;
++			opp-microvolt-L5 = <737500 737500 875000>;
++			opp-microvolt-L6 = <725000 725000 875000>;
++		};
++		opp-800000000 {
++			opp-hz = /bits/ 64 <800000000>;
++			opp-microvolt = <800000 800000 875000>;
++			opp-microvolt-L1 = <800000 800000 875000>;
++			opp-microvolt-L2 = <787500 787500 875000>;
++			opp-microvolt-L3 = <775000 775000 875000>;
++			opp-microvolt-L4 = <762500 762500 875000>;
++			opp-microvolt-L5 = <750000 750000 875000>;
++			opp-microvolt-L6 = <737500 737500 875000>;
++			opp-microvolt-L7 = <725000 725000 875000>;
++			opp-microvolt-L8 = <725000 725000 875000>;
++			opp-microvolt-L9 = <725000 725000 875000>;
++			opp-microvolt-L10 = <725000 725000 875000>;
++		};
++		opp-900000000 {
++			opp-hz = /bits/ 64 <900000000>;
++			opp-microvolt = <850000 850000 875000>;
++			opp-microvolt-L1 = <850000 850000 875000>;
++			opp-microvolt-L2 = <837500 837500 875000>;
++			opp-microvolt-L3 = <825000 825000 875000>;
++			opp-microvolt-L4 = <812500 812500 875000>;
++			opp-microvolt-L5 = <800000 800000 875000>;
++			opp-microvolt-L6 = <787500 787500 875000>;
++			opp-microvolt-L7 = <775000 775000 875000>;
++			opp-microvolt-L8 = <762500 762500 875000>;
++			opp-microvolt-L9 = <750000 750000 875000>;
++			opp-microvolt-L10 = <737500 737500 875000>;
++		};
++		opp-950000000 {
++			opp-hz = /bits/ 64 <950000000>;
++			opp-microvolt = <875000 875000 875000>;
++			opp-microvolt-L1 = <875000 875000 875000>;
++			opp-microvolt-L2 = <862500 862500 875000>;
++			opp-microvolt-L3 = <850000 850000 875000>;
++			opp-microvolt-L4 = <837500 837500 875000>;
++			opp-microvolt-L5 = <825000 825000 875000>;
++			opp-microvolt-L6 = <812500 812500 875000>;
++			opp-microvolt-L7 = <800000 800000 875000>;
++			opp-microvolt-L8 = <787500 787500 875000>;
++			opp-microvolt-L9 = <775000 775000 875000>;
++			opp-microvolt-L10 = <762500 762500 875000>;
++		};
++	};
++
++	rknpu_mmu: iommu@27702000 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27702000 0x0 0x100>,
++		      <0x0 0x27702100 0x0 0x100>,
++		      <0x0 0x2770a000 0x0 0x100>,
++		      <0x0 0x2770a100 0x0 0x100>;
++		interrupts = <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>,
++			     <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "npu0_mmu", "npu1_mmu";
++		clocks = <&cru ACLK_RKNN0>, <&cru ACLK_RKNN1>, <&cru ACLK_RKNN_CBUF>, <&cru HCLK_RKNN_CBUF>;
++		clock-names = "aclk0", "aclk1", "a_iface", "h_iface";
++		#iommu-cells = <0>;
++		status = "disabled";
++	};
++
++	jpegd: jpegd@27910000 {
++		compatible = "rockchip,rkv-jpeg-decoder-v1";
++		reg = <0x0 0x27910000 0x0 0x330>;
++		interrupts = <GIC_SPI 331 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_jpegd";
++		clocks = <&cru ACLK_JPEG>, <&cru HCLK_JPEG>;
++		clock-names = "aclk_vcodec", "hclk_vcodec";
++		rockchip,normal-rates = <702000000>, <0>;
++		assigned-clocks = <&cru ACLK_JPEG>;
++		assigned-clock-rates = <702000000>;
++		resets = <&cru SRST_A_JPEG>, <&cru SRST_H_JPEG>;
++		reset-names = "shared_video_a", "shared_video_h";
++		rockchip,skip-pmu-idle-request;
++		iommus = <&jpeg_mmu>;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <0>;
++		rockchip,resetgroup-node = <0>;
++		power-domains = <&power RK3576_PD_VPU>;
++		status = "disabled";
++	};
++
++	jpege: jpege@27910800 {
++		compatible = "rockchip,rkv-jpeg-encoder-v1";
++		reg = <0x0 0x27910800 0x0 0x13c>;
++		interrupts = <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_jpege";
++		clocks = <&cru ACLK_JPEG>, <&cru HCLK_JPEG>;
++		clock-names = "aclk_vcodec", "hclk_vcodec";
++		rockchip,normal-rates = <702000000>, <0>;
++		assigned-clocks = <&cru ACLK_JPEG>;
++		assigned-clock-rates = <702000000>;
++		resets = <&cru SRST_A_JPEG>, <&cru SRST_H_JPEG>;
++		reset-names = "shared_video_a", "shared_video_h";
++		rockchip,skip-pmu-idle-request;
++		iommus = <&jpeg_mmu>;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <0>;
++		rockchip,resetgroup-node = <0>;
++		power-domains = <&power RK3576_PD_VPU>;
++		status = "disabled";
++	};
++
++	jpeg_mmu: iommu@27910f00 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27910f00 0x0 0x28>;
++		interrupts = <GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_jpeg_mmu";
++		clocks = <&cru ACLK_JPEG>, <&cru HCLK_JPEG>;
++		clock-name = "aclk", "iface";
++		#iommu-cells = <0>;
++		rockchip,shootdown-entire;
++		power-domains = <&power RK3576_PD_VPU>;
++		status = "disabled";
++	};
++
++	rga2_core0: rga@27920000 {
++		compatible = "rockchip,rga2";
++		reg = <0x0 0x27920000 0x0 0x1000>;
++		interrupts = <GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "rga2_core0_irq";
++		clocks = <&cru ACLK_RGA2E_0>, <&cru HCLK_RGA2E_0>, <&cru CLK_CORE_RGA2E_0>;
++		clock-names = "aclk_rga", "hclk_rga", "clk_rga";
++		power-domains = <&power RK3576_PD_VPU>;
++		iommus = <&rga2_core0_mmu>;
++		status = "disabled";
++	};
++
++	rga2_core0_mmu: iommu@27920f00 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27920f00 0x0 0x100>;
++		interrupts = <GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "rga2_0_mmu";
++		clocks = <&cru ACLK_RGA2E_0>, <&cru HCLK_RGA2E_0>;
++		clock-names = "aclk", "iface";
++		power-domains = <&power RK3576_PD_VPU>;
++		#iommu-cells = <0>;
++		status = "disabled";
++	};
++
++	rga2_core1: rga@27930000 {
++		compatible = "rockchip,rga2";
++		reg = <0x0 0x27930000 0x0 0x1000>;
++		interrupts = <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "rga2_core1_irq";
++		clocks = <&cru ACLK_RGA2E_1>, <&cru HCLK_RGA2E_1>, <&cru CLK_CORE_RGA2E_1>;
++		clock-names = "aclk_rga", "hclk_rga", "clk_rga";
++		power-domains = <&power RK3576_PD_VPU>;
++		iommus = <&rga2_core1_mmu>;
++		status = "disabled";
++	};
++
++	rga2_core1_mmu: iommu@27930f00 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27930f00 0x0 0x100>;
++		interrupts = <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "rga2_1_mmu";
++		clocks = <&cru ACLK_RGA2E_1>, <&cru HCLK_RGA2E_1>;
++		clock-names = "aclk", "iface";
++		power-domains = <&power RK3576_PD_VPU>;
++		#iommu-cells = <0>;
++		status = "disabled";
++	};
++
++	iep: iep@27960000 {
++		compatible = "rockchip,iep-v2";
++		reg = <0x0 0x27960000 0x0 0x500>;
++		interrupts = <GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_vdpp";
++		clocks = <&cru ACLK_VDPP>, <&cru HCLK_VDPP>, <&cru CLK_CORE_VDPP>;
++		clock-names = "aclk", "hclk", "sclk";
++		rockchip,normal-rates = <600000000>, <0>, <600000000>;
++		assigned-clocks = <&cru ACLK_VDPP>, <&cru CLK_CORE_VDPP>;
++		assigned-clock-rates = <600000000>, <600000000>;
++		resets = <&cru SRST_A_VDPP>, <&cru SRST_H_VDPP>, <&cru SRST_CORE_VDPP>;
++		reset-names = "shared_rst_a", "shared_rst_h", "shared_rst_s";
++		rockchip,skip-pmu-idle-request;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <1>;
++		rockchip,resetgroup-node = <1>;
++		iommus = <&iep_mmu>;
++		power-domains = <&power RK3576_PD_VPU>;
++		status = "disabled";
++	};
++
++	iep_mmu: iommu@27960800 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27960800 0x0 0x100>;
++		interrupts = <GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "iep_mmu";
++		clocks = <&cru ACLK_VDPP>, <&cru HCLK_VDPP>;
++		clock-names = "aclk", "iface";
++		#iommu-cells = <0>;
++		rockchip,shootdown-entire;
++		power-domains = <&power RK3576_PD_VPU>;
++		status = "disabled";
++	};
++
++	vdpp: vdpp@27961000 {
++		compatible = "rockchip,vdpp-rk3576";
++		reg = <0x0 0x27961000 0x0 0x500>,  <0x0 0x27962000 0x0 0x900>;
++		reg-names = "vdpp_regs", "zme_regs";
++		interrupts = <GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_vdpp";
++		clocks = <&cru ACLK_VDPP>, <&cru HCLK_VDPP>, <&cru CLK_CORE_VDPP>;
++		clock-names = "aclk", "hclk", "sclk";
++		rockchip,normal-rates = <600000000>, <0>, <600000000>;
++		assigned-clocks = <&cru ACLK_VDPP>, <&cru CLK_CORE_VDPP>;
++		assigned-clock-rates = <600000000>, <600000000>;
++		resets = <&cru SRST_A_VDPP>, <&cru SRST_H_VDPP>, <&cru SRST_CORE_VDPP>;
++		reset-names = "shared_rst_a", "shared_rst_h", "shared_rst_s";
++		rockchip,skip-pmu-idle-request;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <1>;
++		rockchip,resetgroup-node = <1>;
++		rockchip,disable-auto-freq;
++		iommus = <&iep_mmu>;
++		power-domains = <&power RK3576_PD_VPU>;
++		status = "disabled";
++	};
++
++	rkvenc0: rkvenc-core@27a00000 {
++		compatible = "rockchip,rkv-encoder-rk3576-core";
++		reg = <0x0 0x27a00000 0x0 0x6000>;
++		interrupts = <GIC_SPI 310 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_vepu0";
++		clocks = <&cru ACLK_VEPU0>, <&cru HCLK_VEPU0>, <&cru CLK_VEPU0_CORE>;
++		clock-names = "aclk_vcodec", "hclk_vcodec", "clk_core";
++		rockchip,normal-rates = <400000000>, <0>, <702000000>;
++		resets = <&cru SRST_A_VEPU0>, <&cru SRST_H_VEPU0>,
++			 <&cru SRST_VEPU0_CORE>;
++		reset-names = "video_a", "video_h", "video_core";
++		assigned-clocks = <&cru ACLK_VEPU0>, <&cru CLK_VEPU0_CORE>;
++		assigned-clock-rates = <400000000>, <702000000>;
++		iommus = <&rkvenc0_mmu>;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <3>;
++		rockchip,task-capacity = <8>;
++		rockchip,ccu = <&rkvenc_ccu>;
++		power-domains = <&power RK3576_PD_VEPU0>;
++		status = "disabled";
++	};
++
++	rkvenc0_mmu: iommu@27a0f000 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27a0f000 0x0 0x40>;
++		interrupts = <GIC_SPI 311 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_vepu0_mmu";
++		clocks = <&cru ACLK_VEPU0>, <&cru HCLK_VEPU0>;
++		clock-names = "aclk", "iface";
++		#iommu-cells = <0>;
++		rockchip,shootdown-entire;
++		rockchip,disable-mmu-reset;
++		rockchip,enable-cmd-retry;
++		power-domains = <&power RK3576_PD_VEPU0>;
++		status = "disabled";
++	};
++
++	rkvenc1: rkvenc-core@27a10000 {
++		compatible = "rockchip,rkv-encoder-rk3576-core";
++		reg = <0x0 0x27a10000 0x0 0x6000>;
++		interrupts = <GIC_SPI 387 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_vepu1";
++		clocks = <&cru ACLK_VEPU1>, <&cru HCLK_VEPU1>, <&cru CLK_VEPU1_CORE>;
++		clock-names = "aclk_vcodec", "hclk_vcodec", "clk_core";
++		rockchip,normal-rates = <400000000>, <0>, <702000000>;
++		resets = <&cru SRST_A_VEPU1>, <&cru SRST_H_VEPU1>,
++			 <&cru SRST_VEPU1_CORE>;
++		reset-names = "video_a", "video_h", "video_core";
++		assigned-clocks = <&cru ACLK_VEPU1>, <&cru CLK_VEPU1_CORE>;
++		assigned-clock-rates = <400000000>, <702000000>;
++		iommus = <&rkvenc1_mmu>;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,taskqueue-node = <3>;
++		rockchip,task-capacity = <8>;
++		rockchip,ccu = <&rkvenc_ccu>;
++		power-domains = <&power RK3576_PD_VEPU1>;
++		status = "disabled";
++	};
++
++	rkvenc1_mmu: iommu@27a1f000 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27a1f000 0x0 0x40>;
++		interrupts = <GIC_SPI 388 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_vepu1_mmu";
++		clocks = <&cru ACLK_VEPU1>, <&cru HCLK_VEPU1>;
++		clock-names = "aclk", "iface";
++		#iommu-cells = <0>;
++		rockchip,disable-mmu-reset;
++		rockchip,enable-cmd-retry;
++		rockchip,shootdown-entire;
++		power-domains = <&power RK3576_PD_VEPU1>;
++		status = "disabled";
++	};
++
++	rkvdec: rkvdec@27b00000 {
++		compatible = "rockchip,rkv-decoder-rk3576", "rockchip,rkv-decoder-v383";
++		reg = <0x0 0x27b00100 0x0 0x600>, <0x0 0x27b00000 0x0 0x100>;
++		reg-names = "regs", "link";
++		interrupts = <GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_rkvdec";
++		clocks = <&cru ACLK_RKVDEC_ROOT>, <&cru HCLK_RKVDEC>,
++			 <&cru CLK_RKVDEC_CORE>, <&cru ACLK_RKVDEC_ROOT_BAK>,
++			 <&cru CLK_RKVDEC_HEVC_CA>;
++		clock-names = "aclk_vcodec", "hclk_vcodec",
++			      "clk_core", "clk_cabac",
++			      "clk_hevc_cabac";
++		resets = <&cru SRST_A_RKVDEC_BIU >, <&cru SRST_H_RKVDEC_BIU>,
++			 <&cru SRST_RKVDEC_CORE>, <&cru SRST_RKVDEC_HEVC_CA>;
++		reset-names = "video_a","video_h", "video_core", "video_hevc_cabac";
++		rockchip,normal-rates = <600000000>, <0>, <600000000>, <500000000>, <1000000000>;
++		assigned-clocks = <&cru ACLK_RKVDEC_ROOT>, <&cru CLK_RKVDEC_CORE>,
++				  <&cru ACLK_RKVDEC_ROOT_BAK>, <&cru CLK_RKVDEC_HEVC_CA>;
++		assigned-clock-rates = <600000000>,<600000000>, <500000000>, <1000000000>;
++		iommus = <&rkvdec_mmu>;
++		rockchip,srv = <&mpp_srv>;
++		rockchip,task-capacity = <8>;
++		rockchip,taskqueue-node = <5>;
++		rockchip,sram = <&rkvdec_sram>;
++		rockchip,rcb-iova = <0x10000000 0x78000>;
++		rockchip,rcb-min-width = <512>;
++		power-domains = <&power RK3576_PD_VDEC>;
++		status = "disabled";
++	};
++
++	rkvdec_mmu: iommu@27b00800 {
++		compatible = "rockchip,iommu-v2";
++		reg = <0x0 0x27b00800 0x0 0x40>, <0x0 0x27b00900 0x0 0x40>;
++		interrupts = <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH>;
++		interrupt-names = "irq_rkvdec_mmu";
++		clocks = <&cru ACLK_RKVDEC_ROOT>, <&cru HCLK_RKVDEC>,
++			 <&cru CLK_RKVDEC_CORE>, <&cru ACLK_RKVDEC_ROOT_BAK>;
++		clock-names = "aclk", "iface",
++			      "iface_c", "iface_b";
++		rockchip,disable-mmu-reset;
++		rockchip,enable-cmd-retry;
++		rockchip,shootdown-entire;
++		#iommu-cells = <0>;
++		power-domains = <&power RK3576_PD_VDEC>;
++		status = "disabled";
++	};
++
++};
+diff -ruN a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi
+--- a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi	2026-06-23 04:59:00.497984217 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi	2026-06-23 04:57:45.017885046 -0700
+@@ -312,6 +312,83 @@
+ 	status = "okay";
+ };
+ 
++&iep {
++	status = "okay";
++};
++
++&iep_mmu {
++	status = "okay";
++};
++
++&jpegd {
++	status = "okay";
++};
++
++&jpege {
++	status = "okay";
++};
++
++&jpeg_mmu {
++	status = "okay";
++};
++
++&mpp_srv {
++	status = "okay";
++};
++
++&rga2_core0 {
++	status = "okay";
++};
++
++&rga2_core0_mmu {
++	status = "okay";
++};
++
++&rga2_core1 {
++	status = "okay";
++};
++
++&rga2_core1_mmu {
++	status = "okay";
++};
++
++&rknpu {
++	rknpu-supply = <&vdd_npu_s0>;
++	status = "okay";
++};
++
++&rknpu_mmu {
++	status = "okay";
++};
++
++&rkvenc_ccu {
++	status = "okay";
++};
++
++&rkvenc0 {
++	status = "okay";
++};
++
++&rkvenc0_mmu {
++	status = "okay";
++};
++
++&rkvenc1 {
++	status = "okay";
++};
++
++&rkvenc1_mmu {
++	status = "okay";
++};
++
++&rkvdec {
++	status = "okay";
++};
++
++&rkvdec_mmu {
++	status = "okay";
++};
++
+ &pinctrl {
+ 	usb {
+ 		usb_host_pwren: usb-host-pwren {
+diff -ruN a/drivers/Kconfig b/drivers/Kconfig
+--- a/drivers/Kconfig	2026-05-10 23:20:52.000000000 -0700
++++ b/drivers/Kconfig	2026-06-23 04:56:36.937005361 -0700
+@@ -113,6 +113,8 @@
+ 
+ source "drivers/accel/Kconfig"
+ 
++source "drivers/rknpu/Kconfig"
++
+ source "sound/Kconfig"
+ 
+ source "drivers/hid/Kconfig"
+diff -ruN a/drivers/Makefile b/drivers/Makefile
+--- a/drivers/Makefile	2026-05-10 23:20:52.000000000 -0700
++++ b/drivers/Makefile	2026-06-23 04:56:37.884031410 -0700
+@@ -195,5 +195,7 @@
+ obj-$(CONFIG_CDX_BUS)		+= cdx/
+ obj-$(CONFIG_DPLL)		+= dpll/
+ 
++obj-$(CONFIG_ROCKCHIP_RKNPU)	+= rknpu/
++
+ obj-$(CONFIG_DIBS)		+= dibs/
+ obj-$(CONFIG_S390)		+= s390/
+diff -ruN a/drivers/video/Kconfig b/drivers/video/Kconfig
+--- a/drivers/video/Kconfig	2026-05-10 23:20:52.000000000 -0700
++++ b/drivers/video/Kconfig	2026-06-23 04:56:38.736054845 -0700
+@@ -89,4 +89,6 @@
+ 
+ source "drivers/gpu/trace/Kconfig"
+ 
++source "drivers/video/rockchip/Kconfig"
++
+ endmenu
+diff -ruN a/drivers/video/Makefile b/drivers/video/Makefile
+--- a/drivers/video/Makefile	2026-05-10 23:20:52.000000000 -0700
++++ b/drivers/video/Makefile	2026-06-23 04:56:39.631079470 -0700
+@@ -21,3 +21,5 @@
+ ifeq ($(CONFIG_OF),y)
+ obj-$(CONFIG_VIDEOMODE_HELPERS) += of_display_timing.o of_videomode.o
+ endif
++
++obj-y				  += rockchip/
+diff -ruN a/include/dt-bindings/clock/rockchip,rk3576-cru.h b/include/dt-bindings/clock/rockchip,rk3576-cru.h
+--- a/include/dt-bindings/clock/rockchip,rk3576-cru.h	2026-05-10 23:20:52.000000000 -0700
++++ b/include/dt-bindings/clock/rockchip,rk3576-cru.h	2026-06-23 04:56:41.405128290 -0700
+@@ -593,6 +593,7 @@
+ #define SCMI_ARMCLK_L			10
+ #define SCMI_ARMCLK_B			11
+ #define SCMI_CLK_GPU			456
++#define SCMI_CLK_RKNN_DSU0		238
+ 
+ /* IOC-controlled output clocks */
+ #define CLK_SAI0_MCLKOUT_TO_IO		571

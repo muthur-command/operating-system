@@ -1,0 +1,172 @@
+From 0000000000000000000000000000000000000035 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] iommu: rockchip: export BSP API for RKNPU/MPP modules
+
+0027 restored upstream rockchip-iommu.c without the Rockchip BSP
+export symbols declared in soc/rockchip/rockchip_iommu.h. RKNPU (module)
+and MPP drivers need rockchip_iommu_is_enabled() and related helpers.
+
+Signed-off-by: MC OS <mcos@local>
+---
+ drivers/iommu/rockchip-iommu.c | 128 +++++++++++++++++++++++++++++++++
+ 1 file changed, 128 insertions(+)
+
+diff --git a/drivers/iommu/rockchip-iommu.c b/drivers/iommu/rockchip-iommu.c
+index 1111111..2222222 100644
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -117,6 +117,7 @@ struct rk_iommu {
+ 	struct iommu_device iommu;
+ 	struct list_head node; /* entry in rk_iommu_domain.iommus */
+ 	struct iommu_domain *domain; /* domain to which iommu is attached */
++	bool iommu_enabled;
+ };
+ 
+ struct rk_iommudata {
+@@ -922,6 +923,7 @@ static void rk_iommu_disable(struct rk_iommu *iommu)
+ 	}
+ 	rk_iommu_disable_stall(iommu);
+ 	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
++	iommu->iommu_enabled = false;
+ }
+ 
+ /* Must be called with iommu powered on and attached */
+@@ -956,8 +958,135 @@ static int rk_iommu_enable(struct rk_iommu *iommu)
+ 	rk_iommu_disable_stall(iommu);
+ out_disable_clocks:
+ 	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
++	if (!ret)
++		iommu->iommu_enabled = true;
++	return ret;
++}
++
++static int rk_pagefault_done(struct rk_iommu *iommu)
++{
++	int i;
++
++	for (i = 0; i < iommu->num_mmu; i++) {
++		u32 int_status = rk_iommu_read(iommu->bases[i], RK_MMU_INT_STATUS);
++
++		if (!(int_status & RK_MMU_IRQ_PAGE_FAULT))
++			continue;
++
++		rk_iommu_base_command(iommu->bases[i], RK_MMU_CMD_ZAP_CACHE);
++		if (rk_iommu_read(iommu->bases[i], RK_MMU_INT_MASK) != 0)
++			rk_iommu_base_command(iommu->bases[i],
++					      RK_MMU_CMD_PAGE_FAULT_DONE);
++	}
++
++	return 0;
++}
++
++int rockchip_pagefault_done(struct device *master_dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(master_dev);
++
++	if (!iommu)
++		return -ENODEV;
++
++	return rk_pagefault_done(iommu);
++}
++EXPORT_SYMBOL_GPL(rockchip_pagefault_done);
++
++void __iomem *rockchip_get_iommu_base(struct device *master_dev, int idx)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(master_dev);
++
++	if (!iommu || idx < 0 || idx >= iommu->num_mmu)
++		return NULL;
++
++	return iommu->bases[idx];
++}
++EXPORT_SYMBOL_GPL(rockchip_get_iommu_base);
++
++int rockchip_iommu_disable(struct device *dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
++
++	if (!iommu)
++		return -ENODEV;
++
++	rk_iommu_disable(iommu);
++
++	return 0;
++}
++EXPORT_SYMBOL(rockchip_iommu_disable);
++
++int rockchip_iommu_enable(struct device *dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
++
++	if (!iommu)
++		return -ENODEV;
++
++	return rk_iommu_enable(iommu);
++}
++EXPORT_SYMBOL(rockchip_iommu_enable);
++
++bool rockchip_iommu_is_enabled(struct device *dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
++
++	if (!iommu)
++		return false;
++
++	return iommu->iommu_enabled;
++}
++EXPORT_SYMBOL(rockchip_iommu_is_enabled);
++
++int rockchip_iommu_force_reset(struct device *dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
++	int ret;
++
++	if (!iommu)
++		return -ENODEV;
++
++	ret = rk_iommu_enable_stall(iommu);
++	if (ret)
++		return ret;
++
++	ret = rk_iommu_force_reset(iommu);
++
++	rk_iommu_disable_stall(iommu);
++
+ 	return ret;
+ }
++EXPORT_SYMBOL(rockchip_iommu_force_reset);
++
++void rockchip_iommu_mask_irq(struct device *dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
++	int i;
++
++	if (!iommu)
++		return;
++
++	for (i = 0; i < iommu->num_mmu; i++)
++		rk_iommu_write(iommu->bases[i], RK_MMU_INT_MASK, 0);
++}
++EXPORT_SYMBOL(rockchip_iommu_mask_irq);
++
++void rockchip_iommu_unmask_irq(struct device *dev)
++{
++	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
++	int i;
++
++	if (!iommu)
++		return;
++
++	for (i = 0; i < iommu->num_mmu; i++) {
++		rk_iommu_base_command(iommu->bases[i], RK_MMU_CMD_ZAP_CACHE);
++		rk_iommu_write(iommu->bases[i], RK_MMU_INT_MASK, RK_MMU_IRQ_MASK);
++		rk_iommu_base_command(iommu->bases[i], RK_MMU_CMD_PAGE_FAULT_DONE);
++	}
++}
++EXPORT_SYMBOL(rockchip_iommu_unmask_irq);
+ 
+ static int rk_iommu_identity_attach(struct iommu_domain *identity_domain,
+ 				    struct device *dev)
+-- 
+2.34.1

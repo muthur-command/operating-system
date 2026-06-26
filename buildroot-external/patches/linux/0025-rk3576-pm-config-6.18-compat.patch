@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Wed, 25 Jun 2026 14:00:00 +0800
+Subject: [PATCH] rk3576-pm-config-6.18-compat
+
+Linux 6.18 no longer exports of_find_regulator_by_node, of_gpio_named_count,
+or of_get_named_gpio_flags. Use public regulator and GPIO OF APIs instead.
+
+---
+ drivers/soc/rockchip/rockchip_pm_config.c | 24 ++++++++++++++++--------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+--- a/drivers/soc/rockchip/rockchip_pm_config.c
++++ b/drivers/soc/rockchip/rockchip_pm_config.c
+@@ -31,6 +31,14 @@
+ #define MAX_ON_OFF_REG_PROP_NAME_LEN	60
+ #define MAX_CONFIG_PROP_NAME_LEN	60
+ 
++static struct regulator_dev *rockchip_regulator_dev_by_node(struct device_node *np)
++{
++	struct device *dev;
++
++	dev = class_find_device_by_of_node(&regulator_class, np);
++	return dev ? dev_to_rdev(dev) : NULL;
++}
++
+ #define RK_ATAG_MCU_SLP_CORE		0x526b0001
+ #define RK_ATAG_MCU_SLP_MAX		0x526b00ff
+ #define RK_ATAG_NONE			0x00000000
+@@ -236,7 +244,7 @@
+ 		for (i = 0, j = 0;
+ 		     (dn = of_parse_phandle(node, prop_name, i)) && j < MAX_ON_OFF_REG_NUM;
+ 		     i++) {
+-			reg = of_find_regulator_by_node(dn);
++			reg = rockchip_regulator_dev_by_node(dn);
+ 			if (reg == NULL) {
+ 				pr_warn("failed to find regulator %s for %s\n",
+ 					dn->name, prop_name);
+@@ -518,7 +526,6 @@
+ 	struct device_node *node;
+ 	struct rk_sleep_config *config;
+ 
+-	enum of_gpio_flags flags;
+ 	int i = 0;
+ 	int length;
+ 	int ret;
+@@ -566,7 +573,10 @@
+ 					 config->pwm_regulator_config,
+ 					 0);
+ 
+-	length = of_gpio_named_count(node, "rockchip,power-ctrl");
++	length = of_count_phandle_with_args(node, "rockchip,power-ctrl",
++					  "#gpio-cells");
++	if (length < 0)
++		length = 0;
+ 
+ 	if (length > 0 && length < 10) {
+ 		config->power_ctrl_config_cnt = length;
+@@ -578,10 +588,9 @@
+ 
+ 		for (i = 0; i < length; i++) {
+ 			config->power_ctrl_config[i] =
+-				of_get_named_gpio_flags(node,
++				of_get_named_gpio(node,
+ 							"rockchip,power-ctrl",
+-							i,
+-							&flags);
++							i);
+ 			if (!gpio_is_valid(config->power_ctrl_config[i]))
+ 				break;
+ 			sip_smc_set_suspend_mode(GPIO_POWER_CONFIG,

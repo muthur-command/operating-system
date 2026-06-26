@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Neardi Inc.
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ *
+ * Neardi RK3576 LB200 Board - mainline kernel 6.18+
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/usb/pd.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/soc/rockchip,vop2.h>
+#include "rk3576.dtsi"
+#include "rk3576-rk806.dtsi"
+#include "rk3576-neardi-lb200.dtsi"
+#include "rk3576-neardi-lb200-gmac.dtsi"
+#include "rk3576-neardi-lb200-hdmi.dtsi"
+#include "rk3576-neardi-lb200-full-typec-phy.dtsi"
+#include "rk3576-neardi-lb200-dp.dtsi"
+#include "rk3576-neardi-lb200-wifibt.dtsi"
+#include "rk3576-neardi-lb200-misc-devices.dtsi"
+#include "rk3576-neardi-lb200-sound-ctl.dtsi"
+#include "rk3576-neardi-lb200-input-keymap.dtsi"
+
+/ {
+	model = "Rockchip RK3576 Neardi LB200 Board";
+	compatible = "rockchip,rk3576-evb1-v10", "rockchip,rk3576", "neardi,rk3576-lb200";
+
+	aliases {
+		ethernet0 = &gmac0;
+		ethernet1 = &gmac1;
+	};
+
+	chosen {
+		stdout-path = "serial2:1500000n8";
+	};
+
+	hdmi-con {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con_in: endpoint {
+				remote-endpoint = <&hdmi_out_con>;
+			};
+		};
+	};
+};
+
+&hdmi_out {
+	hdmi_out_con: endpoint {
+		remote-endpoint = <&hdmi_con_in>;
+	};
+};
+
+&uart2 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2m0_xfer>;
+};
+
+&rng {
+	status = "okay";
+};

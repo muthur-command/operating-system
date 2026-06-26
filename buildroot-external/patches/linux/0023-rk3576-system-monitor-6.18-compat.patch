@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Wed, 25 Jun 2026 12:00:00 +0800
+Subject: [PATCH] rk3576-system-monitor-6.18-compat
+
+Linux 6.18 replaced thermal_governor.throttle with manage, and removed
+FB_EVENT_BLANK from fbdev. Adapt the BSP system monitor driver.
+
+---
+ drivers/soc/rockchip/rockchip_system_monitor.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+--- a/drivers/soc/rockchip/rockchip_system_monitor.c
++++ b/drivers/soc/rockchip/rockchip_system_monitor.c
+@@ -1447,14 +1447,13 @@
+ 	return notifier_to_errno(ret);
+ }
+ 
+-static int notify_dummy(struct thermal_zone_device *tz, int trip)
++static void notify_dummy_manage(struct thermal_zone_device *tz)
+ {
+-	return 0;
+ }
+ 
+ static struct thermal_governor thermal_gov_dummy = {
+ 	.name		= "dummy",
+-	.throttle	= notify_dummy,
++	.manage		= notify_dummy_manage,
+ };
+ 
+ static int rockchip_system_monitor_parse_dt(struct system_monitor *monitor)
+@@ -1771,7 +1770,7 @@
+ 	.notifier_call = rockchip_monitor_reboot_notifier,
+ };
+ 
+-#ifdef CONFIG_FB
++#if defined(CONFIG_FB) && defined(FB_EVENT_BLANK)
+ static int rockchip_monitor_fb_notifier(struct notifier_block *nb,
+ 					unsigned long action, void *ptr)
+ {
+@@ -1891,7 +1890,7 @@
+ 
+ 	register_reboot_notifier(&rockchip_monitor_reboot_nb);
+ 
+-#ifdef CONFIG_FB
++#if defined(CONFIG_FB) && defined(FB_EVENT_BLANK)
+ 	if (fb_register_client(&rockchip_monitor_fb_nb))
+ 		dev_err(dev, "failed to register fb nb\n");
+ #elif defined(CONFIG_ROCKCHIP_EARLYSUSPEND)
