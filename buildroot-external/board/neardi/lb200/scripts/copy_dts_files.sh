@@ -72,8 +72,7 @@ find "$SDK_BINDINGS" -name "*rk3576*" -exec cp -v {} "$TARGET_BINDINGS/" \;
 echo -e "  ${GREEN}[OK]${NC} dt-bindings 头文件复制完成"
 
 echo -e "\n${GREEN}Step 3: 复制板级 DTS 文件...${NC}"
-BOARD_DTS="$SDK_DTS/rk3576-neardi-lb200"*.dtsi
-for f in $BOARD_DTS; do
+for f in "$SDK_DTS"/rk3576-neardi-lb200*.dtsi; do
     if [ -f "$f" ]; then
         cp -v "$f" "$TARGET_DIR/"
     fi
@@ -85,4 +84,4 @@ echo -e "${GREEN}  文件复制完成!${NC}"
 echo -e "${GREEN}========================================${NC}"
 
 echo -e "\n${YELLOW}验证复制的文件:${NC}"
-ls -la "$TARGET_DIR"/*.dtsi 2>/dev/null | head -10
+find "$TARGET_DIR" -maxdepth 1 -name '*.dtsi' -print 2>/dev/null | head -10
