@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000044 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Sun, 5 Jul 2026 00:00:00 +0000
+Subject: [PATCH] net: dwmac-rk: align missing delay defaults with SDK 6.1
+
+When tx_delay/rx_delay DT properties are absent, SDK uses -1 (disabled)
+instead of mainline defaults 0x30/0x10.  Also match SDK RGMII_ID handling.
+---
+ drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c	2026-07-04 21:54:37.690509026 -0700
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c	2026-07-04 22:08:02.557384914 -0700
+@@ -1543,7 +1543,7 @@
+ 
+ 	ret = of_property_read_u32(dev->of_node, "tx_delay", &value);
+ 	if (ret) {
+-		bsp_priv->tx_delay = 0x30;
++		bsp_priv->tx_delay = -1;
+ 		dev_err(dev, "Can not read property: tx_delay.");
+ 		dev_err(dev, "set tx_delay to 0x%x\n",
+ 			bsp_priv->tx_delay);
+@@ -1554,7 +1554,7 @@
+ 
+ 	ret = of_property_read_u32(dev->of_node, "rx_delay", &value);
+ 	if (ret) {
+-		bsp_priv->rx_delay = 0x10;
++		bsp_priv->rx_delay = -1;
+ 		dev_err(dev, "Can not read property: rx_delay.");
+ 		dev_err(dev, "set rx_delay to 0x%x\n",
+ 			bsp_priv->rx_delay);
+@@ -1644,7 +1644,7 @@
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_ID:
+ 		dev_info(dev, "init for RGMII_ID\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, 0, 0);
++		bsp_priv->ops->set_to_rgmii(bsp_priv, -1, -1);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_RXID:
+ 		dev_info(dev, "init for RGMII_RXID\n");
+-- 
+2.34.1

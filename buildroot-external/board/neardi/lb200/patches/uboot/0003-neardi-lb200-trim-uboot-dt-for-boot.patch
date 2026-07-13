@@ -1,0 +1,131 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: trim U-Boot DT to boot-critical devices
+
+The board DTS enables dual GMAC, PCIe WiFi, USB, display, UFS, combphy,
+HDPTX, etc.  Vendor U-Boot strips pinctrl from the built-in DTB and only
+needs eMMC + serial for the Android-style boot path.
+
+Disable non-essential peripherals in the U-Boot overlay so dm_autoprobe()
+does not hang after PMIC init.  Linux still uses the full DT from boot FIT.
+---
+ arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi | 109 +++++++++++++++++++++++
+ 1 file changed, 109 insertions(+)
+
+diff --git a/arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi b/arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi
+index 11111111111..22222222222 100644
+--- a/arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi
++++ b/arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi
+@@ -20,3 +20,112 @@
+ 	bootph-all;
+ 	u-boot,dm-pre-reloc;
+ };
++
++/* Boot path only needs eMMC (sdhci) + serial; keep DM probe fast and safe. */
++&gmac0 {
++	status = "disabled";
++};
++
++&gmac1 {
++	status = "disabled";
++};
++
++&gpu {
++	status = "disabled";
++};
++
++&hdmi {
++	status = "disabled";
++};
++
++&vop {
++	status = "disabled";
++};
++
++&vop_mmu {
++	status = "disabled";
++};
++
++&vp0 {
++	status = "disabled";
++};
++
++&pcie0 {
++	status = "disabled";
++};
++
++&ufshc {
++	status = "disabled";
++};
++
++&combphy0_ps {
++	status = "disabled";
++};
++
++&combphy1_psu {
++	status = "disabled";
++};
++
++&hdptxphy {
++	status = "disabled";
++};
++
++&u2phy0 {
++	status = "disabled";
++};
++
++&u2phy1 {
++	status = "disabled";
++};
++
++&usb_drd0_dwc3 {
++	status = "disabled";
++};
++
++&usb_drd1_dwc3 {
++	status = "disabled";
++};
++
++&usbdp_phy {
++	status = "disabled";
++};
++
++&uart4 {
++	status = "disabled";
++};
++
++&sdmmc {
++	status = "disabled";
++};
++
++&i2c1 {
++	status = "disabled";
++};
++
++&i2c2 {
++	status = "disabled";
++};
++
++&saradc {
++	status = "disabled";
++};
++
++&otp {
++	status = "disabled";
++};
++
++&adc_keys {
++	status = "disabled";
++};
++
++&u2phy0_otg {
++	status = "disabled";
++};
++
++&u2phy1_otg {
++	status = "disabled";
++};
++
++&rng {
++	status = "disabled";
++};

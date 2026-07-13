@@ -64,12 +64,8 @@
 #define SKW_MIN_NICE					  -20
 #endif
 
-#ifdef CONFIG_NO_GKI
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
-#endif
-
 #if KERNEL_VERSION(5, 0, 0) <= LINUX_VERSION_CODE
-  MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 #endif
 /****************************************************************
  *Description:the skwsdio log define and the skwsdio data debug,

@@ -169,7 +169,6 @@ static ssize_t skw_usb_log_write(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_usb_log_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_usb_log_open,
 	.read = seq_read,
 	.release = single_release,
@@ -189,7 +188,6 @@ static int skw_version_open(struct inode *inode, struct file *file)
 
 
 static const struct file_operations skw_version_fops = {
-        .owner = THIS_MODULE,
         .open = skw_version_open,
         .read = seq_read,
         .release = single_release,
@@ -228,7 +226,6 @@ static ssize_t skw_cp_log_write(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_cp_log_fops = {
-        .owner = THIS_MODULE,
         .open = skw_cp_log_open,
         .read = seq_read,
         .release = single_release,
@@ -251,7 +248,6 @@ static int skw_port_statistic_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations skw_port_statistic_fops = {
-          .owner = THIS_MODULE,
           .open = skw_port_statistic_open,
           .read = seq_read,
           .release = single_release,
@@ -290,7 +286,6 @@ static ssize_t skw_bluetooth_antenna_write(struct file *fp, const char __user *b
 }
 
 static const struct file_operations skw_bluetooth_antenna_fops = {
-        .owner = THIS_MODULE,
         .open = skw_bluetooth_antenna_open,
         .read = seq_read,
         .release = single_release,
@@ -331,7 +326,6 @@ static ssize_t skw_USB_speed_write(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_USB_speed_fops = {
-        .owner = THIS_MODULE,
         .open = skw_USB_speed_open,
         .read = seq_read,
         .release = single_release,
@@ -370,7 +364,6 @@ static ssize_t skwusb_recovery_debug_write(struct file *fp, const char __user *b
 }
 
 static const struct file_operations skwusb_recovery_debug_fops = {
-    .owner = THIS_MODULE,
     .open = skwusb_recovery_debug_open,
     .read = seq_read,
     .release = single_release,
@@ -401,7 +394,6 @@ static ssize_t skw_bluetooth_UART1_write(struct file *fp, const char __user *buf
 }
 
 static const struct file_operations skw_bluetooth_UART1_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_bluetooth_UART1_open,
 	.release = single_release,
 	.write = skw_bluetooth_UART1_write,

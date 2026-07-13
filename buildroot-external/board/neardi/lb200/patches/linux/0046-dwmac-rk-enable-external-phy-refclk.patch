@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000046 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 6 Jul 2026 00:00:00 +0000
+Subject: [PATCH] net: dwmac-rk: enable REFCLKO25M for external YT8521 PHY
+
+Rockchip SDK always obtains the PHY node's clock (REFCLKO25M_GMACx_OUT)
+and enables it in gmac_clk_enable().  Mainline only did this for
+integrated PHY, so LB200 YT8521 had MDIO but no 25 MHz refclk: autoneg
+never started (SPEC=0x0000), link LEDs stayed off.
+---
+ drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c | 24 +++++++++++++-------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -1413,12 +1413,16 @@
+ 		clk_set_rate(plat->stmmac_clk, 50000000);
+ 	}
+ 
+-	if (plat->phy_node && bsp_priv->integrated_phy) {
++	if (plat->phy_node) {
+ 		bsp_priv->clk_phy = of_clk_get(plat->phy_node, 0);
+-		ret = PTR_ERR_OR_ZERO(bsp_priv->clk_phy);
+-		if (ret)
+-			return dev_err_probe(dev, ret, "Cannot get PHY clock\n");
+-		clk_set_rate(bsp_priv->clk_phy, 50000000);
++		if (bsp_priv->integrated_phy) {
++			ret = PTR_ERR_OR_ZERO(bsp_priv->clk_phy);
++			if (ret)
++				return dev_err_probe(dev, ret, "Cannot get PHY clock\n");
++			clk_set_rate(bsp_priv->clk_phy, 50000000);
++		} else if (!IS_ERR(bsp_priv->clk_phy)) {
++			clk_set_rate(bsp_priv->clk_phy, 25000000);
++		}
+ 	}
+ 
+ 	return 0;
+@@ -1435,9 +1439,11 @@
+ 			if (ret)
+ 				return ret;
+ 
+-			ret = clk_prepare_enable(bsp_priv->clk_phy);
+-			if (ret)
+-				return ret;
++			if (!IS_ERR_OR_NULL(bsp_priv->clk_phy)) {
++				ret = clk_prepare_enable(bsp_priv->clk_phy);
++				if (ret)
++					return ret;
++			}
+ 
+ 			if (bsp_priv->ops && bsp_priv->ops->set_clock_selection)
+ 				bsp_priv->ops->set_clock_selection(bsp_priv,
+@@ -1455,7 +1461,8 @@
+ 
+ 			clk_bulk_disable_unprepare(bsp_priv->num_clks,
+ 						   bsp_priv->clks);
+-			clk_disable_unprepare(bsp_priv->clk_phy);
++			if (!IS_ERR_OR_NULL(bsp_priv->clk_phy))
++				clk_disable_unprepare(bsp_priv->clk_phy);
+ 
+ 			bsp_priv->clk_enabled = false;
+ 		}
+@@ -1801,7 +1808,7 @@
+ 
+ 	rk_gmac_powerdown(bsp_priv);
+ 
+-	if (priv->plat->phy_node && bsp_priv->integrated_phy)
++	if (priv->plat->phy_node && !IS_ERR_OR_NULL(bsp_priv->clk_phy))
+ 		clk_put(bsp_priv->clk_phy);
+ }
+ 
+-- 
+2.34.1

@@ -108,6 +108,7 @@ if [ -z "${SUPERVISOR_CONTAINER_ID}" ]; then
         -v /run/supervisor:/run/os:rw \
         -v /run/udev:/run/udev:ro \
         -v /etc/machine-id:/etc/machine-id:ro \
+        -v /etc/resolv.conf:/run/host/etc/resolv.conf:ro \
         -v ${SUPERVISOR_DATA}:/data:rw,slave \
         -e SUPERVISOR_SHARE=${SUPERVISOR_DATA} \
         -e SUPERVISOR_NAME=mcos_supervisor \

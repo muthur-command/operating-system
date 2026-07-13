@@ -1,0 +1,167 @@
+From 0000000000000000000000000000000000000042 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Mon, 6 Jul 2026 00:00:00 +0000
+Subject: [PATCH] net: phy: motorcomm: restore YT8521 LB200 init from SDK 6.1
+
+Align config_init/soft_reset with Rockchip SDK 6.1 for Neardi LB200:
+program PHY RGMII RX delay (rgmii-rxid), SDK-style fire-and-forget
+soft reset, LED polarity, and genphy autoneg.
+---
+ drivers/net/phy/motorcomm.c | 120 +++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 120 insertions(+), 16 deletions(-)
+
+--- a/drivers/net/phy/motorcomm.c
++++ b/drivers/net/phy/motorcomm.c
+@@ -219,6 +219,10 @@
+ #define YT8521_LED1_CFG_REG			0xA00D
+ #define YT8521_LED2_CFG_REG			0xA00E
+ #define YT8521_LED_ACT_BLK_IND			BIT(13)
++
++/* Neardi LB200 RJ45 LED polarity (from SDK motorcomm.c) */
++#define YT8521_LED1_STATUS			0xc870
++#define YT8521_LED2_STATUS			0xe610
+ #define YT8521_LED_FDX_ON_EN			BIT(12)
+ #define YT8521_LED_HDX_ON_EN			BIT(11)
+ #define YT8521_LED_TXACT_BLK_EN			BIT(10)
+@@ -1097,6 +1101,10 @@
+ 			return ret;
+ 	}
+ 
++	/* External REFCLK from SoC (clocks DT): leave SYNCE/strap as hardware (SDK 6.1). */
++	if (of_find_property(node, "clocks", NULL))
++		return 0;
++
+ 	if (of_property_read_u32(node, "motorcomm,clk-out-frequency-hz", &freq))
+ 		freq = YTPHY_DTS_OUTPUT_CLK_DIS;
+ 
+@@ -1599,7 +1607,22 @@
+  */
+ static int yt8521_soft_reset(struct phy_device *phydev)
+ {
+-	return yt8521_modify_utp_fiber_bmcr(phydev, 0, BMCR_RESET);
++	struct yt8521_priv *priv = phydev->priv;
++	int val, ret;
++
++	/* SDK 6.1: fire-and-forget BMCR reset on UTP page (no poll loop). */
++	if (priv->polling_mode != YT8521_MODE_UTP)
++		return 0;
++
++	ret = ytphy_write_ext(phydev, YT8521_REG_SPACE_SELECT_REG, 0);
++	if (ret < 0)
++		return ret;
++
++	val = phy_read(phydev, MII_BMCR);
++	if (val < 0)
++		return val;
++
++	return phy_write(phydev, MII_BMCR, val | BMCR_RESET);
+ }
+ 
+ /**
+@@ -1653,6 +1676,17 @@
+ 	return yt8521_modify_utp_fiber_bmcr(phydev, BMCR_PDOWN, 0);
+ }
+ 
++static int yt8521_lb200_led_init(struct phy_device *phydev)
++{
++	int ret;
++
++	ret = ytphy_write_ext(phydev, YT8521_LED1_CFG_REG, YT8521_LED1_STATUS);
++	if (ret < 0)
++		return ret;
++
++	return ytphy_write_ext(phydev, YT8521_LED2_CFG_REG, YT8521_LED2_STATUS);
++}
++
+ /**
+  * yt8521_config_init() - called to initialize the PHY
+  * @phydev: a pointer to a &struct phy_device
+@@ -1661,38 +1695,54 @@
+  */
+ static int yt8521_config_init(struct phy_device *phydev)
+ {
+-	struct device_node *node = phydev->mdio.dev.of_node;
+-	int old_page;
++	struct yt8521_priv *priv = phydev->priv;
++	int val;
+ 	int ret = 0;
++	u16 bmcr = 0, bmsr = 0, spec = 0;
+ 
+-	old_page = phy_select_page(phydev, YT8521_RSSR_UTP_SPACE);
+-	if (old_page < 0)
+-		goto err_restore_page;
++	phydev->irq = PHY_POLL;
+ 
+-	/* set rgmii delay mode */
++	ret = ytphy_write_ext(phydev, YT8521_REG_SPACE_SELECT_REG, 0);
++	if (ret < 0)
++		return ret;
++
++	/* rgmii-rxid: PHY internal RX delay (SoC RX tap disabled). */
+ 	if (phydev->interface != PHY_INTERFACE_MODE_SGMII) {
+ 		ret = ytphy_rgmii_clk_delay_config(phydev);
+ 		if (ret < 0)
+-			goto err_restore_page;
++			return ret;
+ 	}
+ 
+-	if (of_property_read_bool(node, "motorcomm,auto-sleep-disabled")) {
+-		/* disable auto sleep */
+-		ret = ytphy_modify_ext(phydev, YT8521_EXTREG_SLEEP_CONTROL1_REG,
+-				       YT8521_ESC1R_SLEEP_SW, 0);
+-		if (ret < 0)
+-			goto err_restore_page;
+-	}
++	val = ytphy_read_ext(phydev, YT8521_EXTREG_SLEEP_CONTROL1_REG);
++	if (val < 0)
++		return val;
++	val &= ~YT8521_ESC1R_SLEEP_SW;
++	ret = ytphy_write_ext(phydev, YT8521_EXTREG_SLEEP_CONTROL1_REG, val);
++	if (ret < 0)
++		return ret;
+ 
+-	if (of_property_read_bool(node, "motorcomm,keep-pll-enabled")) {
+-		/* enable RXC clock when no wire plug */
+-		ret = ytphy_modify_ext(phydev, YT8521_CLOCK_GATING_REG,
+-				       YT8521_CGR_RX_CLK_EN, 0);
+-		if (ret < 0)
+-			goto err_restore_page;
+-	}
+-err_restore_page:
+-	return phy_restore_page(phydev, old_page, ret);
++	val = ytphy_read_ext(phydev, YT8521_CLOCK_GATING_REG);
++	if (val < 0)
++		return val;
++	val &= ~YT8521_CGR_RX_CLK_EN;
++	ret = ytphy_write_ext(phydev, YT8521_CLOCK_GATING_REG, val);
++	if (ret < 0)
++		return ret;
++
++	ret = yt8521_lb200_led_init(phydev);
++	if (ret < 0)
++		return ret;
++
++	bmcr = (u16)phy_read(phydev, MII_BMCR);
++	bmsr = (u16)phy_read(phydev, MII_BMSR);
++	spec = (u16)phy_read(phydev, YTPHY_SPECIFIC_STATUS_REG);
++
++	netdev_info(phydev->attached_dev,
++		    "yt8521_config_init: LB200 done addr %d strap %u mode %u if %d BMCR=0x%04x BMSR=0x%04x SPEC=0x%04x\n",
++		    phydev->mdio.addr, priv->strap_mode, priv->polling_mode,
++		    phydev->interface, bmcr, bmsr, spec);
++
++	return 0;
+ }
+ 
+ static const unsigned long supported_trgs = (BIT(TRIGGER_NETDEV_FULL_DUPLEX) |
+@@ -3027,7 +3077,7 @@
+ 		.write_page	= yt8521_write_page,
+ 		.get_wol	= ytphy_get_wol,
+ 		.set_wol	= ytphy_set_wol,
+-		.config_aneg	= yt8521_config_aneg,
++		.config_aneg	= genphy_config_aneg,
+ 		.aneg_done	= yt8521_aneg_done,
+ 		.config_init	= yt8521_config_init,
+ 		.read_status	= yt8521_read_status,
+-- 
+2.34.1

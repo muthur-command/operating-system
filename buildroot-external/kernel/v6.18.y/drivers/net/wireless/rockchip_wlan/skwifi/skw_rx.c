@@ -107,7 +107,6 @@ static ssize_t skw_rx_reorder_write(struct file *fp, const char __user *buf,
 }
 
 static const struct file_operations skw_rx_reorder_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_rx_reorder_open,
 	.read = seq_read,
 	.release = single_release,
@@ -829,7 +828,7 @@ static void skw_reorder_force_release(struct skw_tid_rx *tid_rx,
 	    atomic_read(&tid_rx->reorder->ref_cnt) == tid_rx->ref_cnt &&
 	    (ieee80211_sn_less(tid_rx->reorder->expired.sn, to_sn) ||
 	     ieee80211_sn_less(to_sn, tid_rx->win_start)))
-		del_timer(&tid_rx->reorder->timer);
+		skw_del_timer(&tid_rx->reorder->timer);
 
 	while (ieee80211_sn_less(tid_rx->win_start, target)) {
 		struct sk_buff_head *list;
@@ -898,7 +897,7 @@ static void skw_reorder_release(struct skw_reorder_rx *reorder,
 	for (i = 0; i < tid_rx->win_size; i++) {
 		if (tid_rx->stored_num == 0) {
 			if (timer_pending(&reorder->timer))
-				del_timer(&reorder->timer);
+				skw_del_timer(&reorder->timer);
 
 			break;
 		}
@@ -932,7 +931,7 @@ static void skw_reorder_release(struct skw_reorder_rx *reorder,
 
 			if (timer_pending(&reorder->timer) &&
 			    reorder->expired.sn == tid_rx->win_start)
-				del_timer(&reorder->timer);
+				skw_del_timer(&reorder->timer);
 
 			if (SKW_SKB_RXCB(skb)->amsdu_flags & SKW_AMSDU_FLAG_TAINT) {
 				__skb_queue_purge(list);
@@ -1127,7 +1126,7 @@ static void skw_ampdu_reorder(struct skw_core *skw, struct skw_rx_desc *desc,
 
 		if (timer_pending(&reorder->timer) &&
 			reorder->expired.sn == tid_rx->win_start)
-			del_timer(&reorder->timer);
+			skw_del_timer(&reorder->timer);
 
 		tid_rx->win_start = ieee80211_sn_inc(tid_rx->win_start);
 
@@ -1155,7 +1154,7 @@ out:
 			skw_set_reorder_timer(tid_rx, desc->sn);
 	} else {
 		if (timer_pending(&reorder->timer))
-			del_timer(&reorder->timer);
+			skw_del_timer(&reorder->timer);
 	}
 }
 
@@ -1604,7 +1603,7 @@ int skw_del_tid_rx(struct skw_peer *peer, u16 tid)
 
 	smp_wmb();
 
-	del_timer_sync(&reorder->timer);
+	skw_del_timer_sync(&reorder->timer);
 
 	if (tid_rx) {
 #ifdef CONFIG_SKW6316_GKI_DRV
@@ -1722,8 +1721,11 @@ int skw_rx_poll_rx(struct napi_struct *napi, int budget)
 
 static int __skw_rx_init(struct skw_core *skw)
 {
-	init_dummy_netdev(&skw->dummy_dev);
-	netif_napi_add(&skw->dummy_dev, &skw->napi_rx, skw_rx_poll_rx);
+	skw->dummy_dev = skw_alloc_dummy_netdev();
+	if (!skw->dummy_dev)
+		return -ENOMEM;
+
+	netif_napi_add(skw->dummy_dev, &skw->napi_rx, skw_rx_poll_rx);
 	napi_enable(&skw->napi_rx);
 
 	return 0;
@@ -1733,6 +1735,10 @@ static void __skw_rx_deinit(struct skw_core *skw)
 {
 	napi_disable(&skw->napi_rx);
 	netif_napi_del(&skw->napi_rx);
+	if (skw->dummy_dev) {
+		skw_free_dummy_netdev(skw->dummy_dev);
+		skw->dummy_dev = NULL;
+	}
 }
 
 #endif
@@ -1963,8 +1969,10 @@ int skw_rx_init(struct skw_core *skw)
 	}
 
 	ret = __skw_rx_init(skw);
-	if (ret < 0)
+	if (ret < 0) {
 		skw_register_rx_callback(skw, NULL, NULL, NULL, NULL);
+		return ret;
+	}
 
 	rx_reorder_flag = true;
 	skw_debugfs_file(skw->dentry, "rx_reorder", 0666, &skw_rx_reorder_fops, NULL);

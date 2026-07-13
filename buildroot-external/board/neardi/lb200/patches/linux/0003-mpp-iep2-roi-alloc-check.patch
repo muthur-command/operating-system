@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000003 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Fri, 3 Jul 2026 17:55:00 +0800
+Subject: [PATCH] mpp: iep2: fix inverted roi buffer allocation check
+
+iep2_init() prints "allocate roi buffer failed" when dma_alloc_coherent
+succeeds (the condition is inverted). Fix the check so the error is
+reported only on actual allocation failure.
+
+Signed-off-by: mortyzhaoyu <morty.zhaoyu@gmail.com>
+---
+ drivers/video/rockchip/mpp/mpp_iep2.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/video/rockchip/mpp/mpp_iep2.c
++++ b/drivers/video/rockchip/mpp/mpp_iep2.c
+@@ -893,7 +893,7 @@
+ 	iep->roi.vaddr = dma_alloc_coherent(mpp->dev, iep->roi.size,
+ 					    &iep->roi.iova,
+ 					    GFP_KERNEL);
+-	if (iep->roi.vaddr) {
++	if (!iep->roi.vaddr) {
+ 		dev_err(mpp->dev, "allocate roi buffer failed\n");
+ 		//return -ENOMEM;
+ 	}

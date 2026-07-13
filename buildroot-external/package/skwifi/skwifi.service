@@ -1,0 +1,12 @@
+[Unit]
+Description=Seekwave SDIO WiFi driver
+After=systemd-modules-load.service
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/sbin/modprobe skw_sdio_v20 && sleep 2 && /sbin/modprobe skw6316'
+
+[Install]
+WantedBy=multi-user.target

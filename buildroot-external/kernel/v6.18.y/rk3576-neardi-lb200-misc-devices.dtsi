@@ -48,7 +48,8 @@
 	reset-gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_HIGH>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie_rst>;
-	status = "okay";
+	/* No PCIe device populated ("Phy link never came up"); saves ~1.1s boot */
+	status = "disabled";
 };
 
 &uart5 {
@@ -57,7 +58,8 @@
 	rs485-rts-delay = <0 0>;
 	rs485-rx-during-tx;
 	pinctrl-names = "default";
-	pinctrl-0 = <&uart5m2_xfer>;
+	/* uart5m2_xfer shares gpio2 PA4/PA5 with sdmmc0; use m0 instead */
+	pinctrl-0 = <&uart5m0_xfer>;
 };
 
 &can0 {
@@ -76,8 +78,9 @@
 	status = "okay";
 };
 
+/* SPI NOR not populated: JEDEC ID reads 00 00 00 in both SPL and Linux */
 &sfc1 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&fspi1m1_pins &fspi1m1_csn0>;
 

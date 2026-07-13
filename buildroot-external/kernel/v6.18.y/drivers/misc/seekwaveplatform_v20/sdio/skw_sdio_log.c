@@ -166,7 +166,6 @@ static ssize_t skw_sdio_log_write(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_sdio_log_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_sdio_log_open,
 	.read = seq_read,
 	.release = single_release,
@@ -185,7 +184,6 @@ static int skw_version_open(struct inode *inode, struct file *file)
 
 
 static const struct file_operations skw_version_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_version_open,
 	.read = seq_read,
 	.release = single_release,
@@ -211,7 +209,6 @@ static int skw_port_statistic_open(struct inode *inode, struct file *file)
 
 
 static const struct file_operations skw_port_statistic_fops = {
-        .owner = THIS_MODULE,
         .open = skw_port_statistic_open,
         .read = seq_read,
         .release = single_release,
@@ -248,7 +245,6 @@ static ssize_t skw_cp_log_write(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_cp_log_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_cp_log_open,
 	.read = seq_read,
 	.release = single_release,
@@ -278,7 +274,6 @@ static ssize_t skw_bluetooth_UART1_write(struct file *fp, const char __user *buf
 }
 
 static const struct file_operations skw_bluetooth_UART1_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_bluetooth_UART1_open,
 	.release = single_release,
 	.write = skw_bluetooth_UART1_write,
@@ -318,7 +313,6 @@ static ssize_t skw_bluetooth_antenna_write(struct file *fp, const char __user *b
 }
 
 static const struct file_operations skw_bluetooth_antenna_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_bluetooth_antenna_open,
 	.read = seq_read,
 	.release = single_release,
@@ -358,7 +352,6 @@ static ssize_t skw_recovery_debug_write(struct file *fp, const char __user *buff
 }
 
 static const struct file_operations skw_recovery_debug_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_recovery_debug_open,
 	.read = seq_read,
 	.release = single_release,
@@ -392,7 +385,6 @@ static ssize_t skw_dump_mem_write(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_dump_mem_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_dump_mem_open,
 	.read = seq_read,
 	.release = single_release,
@@ -432,7 +424,6 @@ static ssize_t skw_sdio_wifi_poweron(struct file *fp, const char __user *buffer,
 }
 
 static const struct file_operations skw_sdio_wifi_fops = {
-          .owner = THIS_MODULE,
           .open = skw_sdio_wifi_open,
           .read = seq_read,
           .release = single_release,
@@ -563,7 +554,6 @@ static ssize_t skw_sdio_channel_record_write(struct file *fp, const char __user 
 }
 
 static const struct file_operations skw_sdio_channel_record_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_sdio_channel_record_open,
 	.read = seq_read,
 	.release = single_release,

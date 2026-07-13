@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: skip lowlevel_init on BL33 ATF handoff
+
+Vendor SPL/ATF already initialized the platform; skip lowlevel_init when
+CONFIG_SKIP_LOWLEVEL_INIT is set for BL33.
+---
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -178,7 +178,12 @@
+ 	 */
+ 
+ 	/* Processor specific initialization */
++#if defined(CONFIG_ROCKCHIP_RK3576) && !defined(CONFIG_XPL_BUILD) && \
++	defined(CONFIG_SKIP_LOWLEVEL_INIT)
++	b	master_cpu
++#else
+ 	bl	lowlevel_init
++#endif
+ 
+ #if defined(CONFIG_ARMV8_SPIN_TABLE) && !defined(CONFIG_XPL_BUILD)
+ 	branch_if_master x0, master_cpu

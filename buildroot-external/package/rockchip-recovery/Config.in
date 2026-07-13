@@ -1,0 +1,27 @@
+config BR2_PACKAGE_ROCKCHIP_RECOVERY
+	bool "Rockchip recovery / updateEngine (Linux)"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	select BR2_PACKAGE_LIBPTHREAD_STUBS
+	select BR2_PACKAGE_UTIL_LINUX
+	select BR2_PACKAGE_LIBCURL
+	select BR2_PACKAGE_BZIP2
+	select BR2_PACKAGE_OPENSSL
+	help
+	  Rockchip updateEngine and A/B boot control for Linux.
+	  Sources are vendored under package/rockchip-recovery/src.
+
+if BR2_PACKAGE_ROCKCHIP_RECOVERY
+
+config BR2_PACKAGE_ROCKCHIP_RECOVERY_BOOTCONTROL
+	bool "Linux A/B boot control (updateEngine --misc=now)"
+	default y
+
+config BR2_PACKAGE_ROCKCHIP_RECOVERY_UPDATEENGINE
+	bool "updateEngine binary"
+	default y
+
+config BR2_PACKAGE_ROCKCHIP_RECOVERY_SUCCESSFUL_BOOT
+	bool "successful_boot A/B slot marking"
+	default y
+
+endif

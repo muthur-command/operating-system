@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Neardi RK3576 LB200 — U-Boot boot device tree (minimal).
+ *
+ * Vendor SPL/ATF already powers rails and initializes eMMC.  Full U-Boot only
+ * needs SDHCI + UART before bootm; Linux still uses the full board DT in the
+ * kernel FIT.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "rk3576.dtsi"
+
+/ {
+	model = "Neardi RK3576 LB200 (U-Boot)";
+	compatible = "neardi,rk3576-lb200", "rockchip,rk3576";
+
+	chosen {
+		stdout-path = "serial2:1500000n8";
+	};
+};
+
+&sdhci {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	mmc-hs200-1_8v;
+	no-sdio;
+	no-sd;
+	non-removable;
+	status = "okay";
+};
+
+&uart2 {
+	status = "okay";
+};

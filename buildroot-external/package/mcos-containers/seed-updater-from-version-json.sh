@@ -31,7 +31,15 @@ jq --arg channel "${channel}" '
     postgresql: .postgresql,
     redis: .redis,
     mcos_upgrade: .mcos_upgrade,
-    image: .images
+    ota: .ota,
+    image: (
+      .images
+      | if .mc_bd and (.muthurcommand == null) then
+          . + {muthurcommand: .mc_bd}
+        else
+          .
+        end
+    )
   }
   | with_entries(select(.value != null))
 ' "${version_json}" > "${output}"

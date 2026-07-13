@@ -48,6 +48,9 @@
 		/* YT8521 needs broadcast address 0x0 */
 		reg = <0x0>;
 		clocks = <&cru REFCLKO25M_GMAC0_OUT>;
+		rx-internal-delay-ps = <1950>;
+		motorcomm,auto-sleep-disabled;
+		motorcomm,keep-pll-enabled;
 	};
 };
 
@@ -57,5 +60,8 @@
 		/* YT8521 needs broadcast address 0x0 */
 		reg = <0x0>;
 		clocks = <&cru REFCLKO25M_GMAC1_OUT>;
+		rx-internal-delay-ps = <1950>;
+		motorcomm,auto-sleep-disabled;
+		motorcomm,keep-pll-enabled;
 	};
 };

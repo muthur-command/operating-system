@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: naked save_boot_params for ATF BL33 handoff
+
+BL33 is entered from ATF without a BROM stack; use a naked save_boot_params
+to jump back into start.S without touching SP.
+---
+--- a/arch/arm/mach-rockchip/bootrom.c
++++ b/arch/arm/mach-rockchip/bootrom.c
+@@ -58,6 +58,13 @@ static bool check_back_to_brom_dnl_flag(void)
+ 	return false;
+ }
+ 
++#if !defined(CONFIG_XPL_BUILD) && defined(CONFIG_SKIP_LOWLEVEL_INIT)
++void save_boot_params(void) __attribute__((naked));
++void save_boot_params(void)
++{
++	asm volatile("b save_boot_params_ret");
++}
++#else
+ /*
+  * All Rockchip BROM implementations enter with a valid stack-pointer,
+  * so this can safely be implemented in C (providing a single
+@@ -107,3 +114,4 @@ int save_boot_params(void)
+ 
+ 	return ret;
+ }
++#endif

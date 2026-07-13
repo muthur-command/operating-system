@@ -583,6 +583,26 @@ static inline void skw_sta_assert_lock(struct skw_sta_core *core)
 	lockdep_assert_held(&core->lock);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+static inline void skw_wdev_lock(struct wireless_dev *wdev)
+	__acquires(wdev)
+{
+	mutex_lock(&wdev->wiphy->mtx);
+	__acquire(wdev->wiphy->mtx);
+}
+
+static inline void skw_wdev_unlock(struct wireless_dev *wdev)
+	__releases(wdev)
+{
+	__release(wdev->wiphy->mtx);
+	mutex_unlock(&wdev->wiphy->mtx);
+}
+
+static inline void skw_wdev_assert_lock(struct skw_iface *iface)
+{
+	lockdep_assert_held(&iface->wdev.wiphy->mtx);
+}
+#else
 static inline void skw_wdev_lock(struct wireless_dev *wdev)
 	__acquires(wdev)
 {
@@ -601,6 +621,7 @@ static inline void skw_wdev_assert_lock(struct skw_iface *iface)
 {
 	lockdep_assert_held(&iface->wdev.mtx);
 }
+#endif
 
 struct skw_iface *skw_add_iface(struct wiphy *wiphy, const char *name,
 				enum nl80211_iftype iftype, u8 *mac,

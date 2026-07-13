@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000002 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Fri, 3 Jul 2026 15:00:00 +0800
+Subject: [PATCH] mpp: rkvdec2: don't oops when the IOMMU is missing
+
+If the rkvdec IOMMU fails to probe, mpp_dev_probe() sets iommu_info to
+NULL and continues. rkvdec2_alloc_rcbbuf() then dereferences
+iommu_info->domain (NULL + 0x40) and the deferred-probe worker oopses;
+a second oops follows in rkvdec_vdpu383_reset() from runtime suspend
+because link_dec was never initialised. Bail out cleanly in both paths.
+
+---
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+@@ -1418,6 +1418,10 @@
+ 	int ret = 0;
+ 	u32 irq_status = 0;
+ 
++	/* link table mode not initialised (e.g. probe failed early) */
++	if (!link)
++		return 0;
++
+ 	mpp_debug_enter();
+ 
+ 	/* disable irq */
+@@ -1697,6 +1701,12 @@
+ 	struct iommu_domain *domain;
+ 	struct device *dev = &pdev->dev;
+ 
++	/* RCB needs a working IOMMU; bail out cleanly instead of oopsing */
++	if (!dec->mpp.iommu_info) {
++		dev_warn(dev, "no iommu attached, skip rcb buffer\n");
++		return -ENODEV;
++	}
++
+ 	/* get rcb iova start and size */
+ 	ret = device_property_read_u32_array(dev, "rockchip,rcb-iova", vals, 2);
+ 	if (ret) {
+
+-- 
+2.43.0

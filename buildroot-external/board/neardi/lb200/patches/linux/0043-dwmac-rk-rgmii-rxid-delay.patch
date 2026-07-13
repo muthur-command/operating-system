@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000043 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Sun, 5 Jul 2026 00:00:00 +0000
+Subject: [PATCH] net: dwmac-rk: match SDK RGMII_RXID delay handling on RK3576
+
+Rockchip SDK 6.1 treats negative delay values as "leave disabled" and only
+programs tap values when the corresponding line is enabled.  Mainline used
+truthiness (so tx_delay=0 disabled TX) and always wrote RX tap=0 for
+RGMII_RXID, which breaks YT8521 + rgmii-rxid on LB200.
+---
+ drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+index 1111111..2222222 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -156,8 +156,12 @@
+ #define GRF_CLR_BIT(nr)	(BIT(nr+16))
+ 
+ #define DELAY_ENABLE(soc, tx, rx) \
+-	(((tx) ? soc##_GMAC_TXCLK_DLY_ENABLE : soc##_GMAC_TXCLK_DLY_DISABLE) | \
+-	 ((rx) ? soc##_GMAC_RXCLK_DLY_ENABLE : soc##_GMAC_RXCLK_DLY_DISABLE))
++	((((tx) >= 0) ? soc##_GMAC_TXCLK_DLY_ENABLE : soc##_GMAC_TXCLK_DLY_DISABLE) | \
++	 (((rx) >= 0) ? soc##_GMAC_RXCLK_DLY_ENABLE : soc##_GMAC_RXCLK_DLY_DISABLE))
++
++#define DELAY_VALUE(soc, tx, rx) \
++	((((tx) >= 0) ? soc##_GMAC_CLK_TX_DL_CFG(tx) : 0) | \
++	 (((rx) >= 0) ? soc##_GMAC_CLK_RX_DL_CFG(rx) : 0))
+ 
+ #define RK_GRF_MACPHY_CON0		0xb00
+ #define RK_GRF_MACPHY_CON1		0xb04
+@@ -1080,11 +1084,9 @@ static void rk3576_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 
+ 	/* m0 && m1 delay value */
+ 	regmap_write(bsp_priv->php_grf, offset_con,
+-		     RK3576_GMAC_CLK_TX_DL_CFG(tx_delay) |
+-		     RK3576_GMAC_CLK_RX_DL_CFG(rx_delay));
++		     DELAY_VALUE(RK3576, tx_delay, rx_delay));
+ 	regmap_write(bsp_priv->php_grf, offset_con + 0x4,
+-		     RK3576_GMAC_CLK_TX_DL_CFG(tx_delay) |
+-		     RK3576_GMAC_CLK_RX_DL_CFG(rx_delay));
++		     DELAY_VALUE(RK3576, tx_delay, rx_delay));
+ }
+ 
+ static void rk3576_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -1646,11 +1648,11 @@ static int rk_gmac_powerup(struct rk_priv_data *bsp_priv)
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_RXID:
+ 		dev_info(dev, "init for RGMII_RXID\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, bsp_priv->tx_delay, 0);
++		bsp_priv->ops->set_to_rgmii(bsp_priv, bsp_priv->tx_delay, -1);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_TXID:
+ 		dev_info(dev, "init for RGMII_TXID\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, 0, bsp_priv->rx_delay);
++		bsp_priv->ops->set_to_rgmii(bsp_priv, -1, bsp_priv->rx_delay);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RMII:
+ 		dev_info(dev, "init for RMII\n");
+-- 
+2.34.1

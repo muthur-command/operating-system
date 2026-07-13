@@ -1,0 +1,7 @@
+config BR2_PACKAGE_HOST_ROCKCHIP_PACK
+	bool "rockchip pack tools (afptool, rkImageMaker, boot_merger)"
+	help
+	  Host utilities to build Rockchip update.img firmware packages.
+	  Required for Neardi LB200 (parameter-ab layout).
+
+	  Vendored from Rockchip Linux SDK tooling and rkbin.

@@ -1,0 +1,54 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] rockchip: FIT OP-TEE node for vendor rkbin SPL
+
+Vendor MiniLoaderAll SPL (U-Boot 2017.09) looks up BL32 with IH_OS_OP_TEE
+(os = "op-tee") and expects a plain rkbin tee.bin in loadables.  Mainline
+binman's @tee-SEQ split-elf template only supports ELF/OP-TEE v1 blobs and
+uses os = "tee", so rk3576_bl32_v1.08.bin is never packed.
+
+Use a fixed-address optee image (SDK default: SDRAM + 0x8400000) and list it
+in fit,firmware so it is emitted as a loadable for vendor SPL.
+---
+ arch/arm/dts/rockchip-u-boot.dtsi | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/dts/rockchip-u-boot.dtsi b/arch/arm/dts/rockchip-u-boot.dtsi
+index 11111111111..22222222222 100644
+--- a/arch/arm/dts/rockchip-u-boot.dtsi
++++ b/arch/arm/dts/rockchip-u-boot.dtsi
+@@ -97,20 +97,18 @@
+-			@tee-SEQ {
+-				fit,operation = "split-elf";
++			optee {
+ 				description = "TEE";
+-				type = "tee";
++				type = "firmware";
+ 				arch = FIT_ARCH;
+-				os = "tee";
++				os = "op-tee";
+ 				compression = "none";
+-				fit,load;
+-				fit,entry;
+-				fit,data;
++				load = <(CFG_SYS_SDRAM_BASE + 0x8400000)>;
++				entry = <(CFG_SYS_SDRAM_BASE + 0x8400000)>;
+ 
+ 				tee-os {
+ 					optional;
+ 				};
+ #ifdef FIT_HASH_ALGO
+ 				hash {
+ 					algo = FIT_HASH_ALGO;
+ 				};
+ #endif
+ 			};
+@@ -155,7 +153,7 @@
+ 				description = "NAME.dtb";
+ 				fdt = "fdt-SEQ";
+ #ifdef CONFIG_ARM64
+-				fit,firmware = "atf-1", "u-boot";
++				fit,firmware = "atf-1", "u-boot", "optee";
+ #else
+ 				fit,firmware = "op-tee", "u-boot";
+ #endif

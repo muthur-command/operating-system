@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: skip DM ns16550_init when UART owned by SPL
+
+Vendor SPL/ATF already owns the debug UART; CONFIG_DEBUG_UART_SKIP_INIT
+only covered the debug_uart helpers, not the DM serial probe path.
+---
+--- a/drivers/serial/ns16550.c
++++ b/drivers/serial/ns16550.c
+@@ -241,6 +241,9 @@ void ns16550_init(struct ns16550 *com_port, int baud_divisor)
+ 	}
+ #endif
+ 
++	if (IS_ENABLED(CONFIG_DEBUG_UART_SKIP_INIT))
++		return;
++
+ 	while (!(serial_in(&com_port->lsr) & UART_LSR_TEMT))
+ 		;
+ 

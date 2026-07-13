@@ -1,8 +1,8 @@
 [Unit]
 Description=MCOS supervisor
-Requires=docker.service rauc.service dbus.socket
-Wants=network-online.target mcos-apparmor.service time-sync.target systemd-journal-gatewayd.socket
-After=docker.service rauc.service dbus.socket network-online.target mcos-apparmor.service time-sync.target systemd-journal-gatewayd.socket
+Requires=docker.service dbus.socket
+Wants=rauc.service network-online.target mcos-apparmor.service time-sync.target systemd-journal-gatewayd.socket
+After=docker.service dbus.socket mcos-apparmor.service time-sync.target systemd-journal-gatewayd.socket
 RequiresMountsFor=/mnt/data /mnt/boot /mnt/overlay
 StartLimitIntervalSec=30m
 StartLimitBurst=3

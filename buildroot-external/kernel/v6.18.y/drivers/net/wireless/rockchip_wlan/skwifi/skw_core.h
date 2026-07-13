@@ -159,7 +159,7 @@ struct skw_lmac {
 
 	// struct skw_wmm_tx cached;
 
-	struct net_device dummy_dev;
+	struct net_device *dummy_dev;
 	struct napi_struct napi_tx;
 	struct napi_struct napi_rx;
 
@@ -355,7 +355,7 @@ struct skw_core {
 	atomic_t tx_wake, rx_wake, exit;
 	wait_queue_head_t tx_wait_q, rx_wait_q;
 
-	struct net_device dummy_dev;
+	struct net_device *dummy_dev;
 	struct napi_struct napi_rx;
 
 #ifdef CONFIG_SKW6316_TX_WORKQUEUE

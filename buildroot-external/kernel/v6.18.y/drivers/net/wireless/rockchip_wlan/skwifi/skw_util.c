@@ -17,6 +17,7 @@
 
 #include <linux/kernel.h>
 #include <linux/etherdevice.h>
+#include <linux/sched/clock.h>
 
 #include "skw_core.h"
 #include "skw_util.h"
@@ -85,7 +86,7 @@ void skw_file_close(struct file *fp)
 	filp_close(fp, NULL);
 }
 
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 #endif
 
 void *skw_build_presp_frame(struct wiphy *wiphy, struct skw_iface *iface,

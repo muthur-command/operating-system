@@ -188,7 +188,6 @@ static const struct proc_ops skw_log_fops = {
 };
 #else
 static const struct file_operations skw_log_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_log_open,
 	.read = seq_read,
 	.release = single_release,

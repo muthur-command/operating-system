@@ -131,7 +131,6 @@ static int skw_lmac_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations skw_lmac_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_lmac_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -1302,9 +1301,12 @@ int skw_edma_init(struct wiphy *wiphy)
 		sprintf(name, "mac%d", i);
 		skw_debugfs_file(SKW_WIPHY_DENTRY(wiphy), name, 0444, &skw_lmac_fops, lmac);
 
-		init_dummy_netdev(&lmac->dummy_dev);
-		netif_napi_add(&lmac->dummy_dev, &lmac->napi_tx, skw_netdev_poll_tx);
-		netif_napi_add(&lmac->dummy_dev, &lmac->napi_rx, skw_netdev_poll_rx);
+		lmac->dummy_dev = skw_alloc_dummy_netdev();
+		if (!lmac->dummy_dev)
+			return -ENOMEM;
+
+		netif_napi_add(lmac->dummy_dev, &lmac->napi_tx, skw_netdev_poll_tx);
+		netif_napi_add(lmac->dummy_dev, &lmac->napi_rx, skw_netdev_poll_rx);
 
 		skb_queue_head_init(&lmac->edma_free_list);
 		skb_queue_head_init(&lmac->avail_skb);
@@ -1341,6 +1343,10 @@ void skw_edma_deinit(struct wiphy *wiphy)
 		napi_disable(&lmac->napi_rx);
 		netif_napi_del(&lmac->napi_tx);
 		netif_napi_del(&lmac->napi_rx);
+		if (lmac->dummy_dev) {
+			skw_free_dummy_netdev(lmac->dummy_dev);
+			lmac->dummy_dev = NULL;
+		}
 		skw_edma_chn_deinit(skw, &skw->edma.tx_chn[i]);
 		skw_edma_chn_deinit(skw, &skw->edma.tx_resp_chn[i]);
 		skw_edma_chn_deinit(skw, &skw->edma.rx_chn[i]);

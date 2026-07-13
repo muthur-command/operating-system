@@ -56,7 +56,6 @@ static int skw_timer_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations skw_timer_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_timer_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -220,7 +219,7 @@ void skw_timer_deinit(struct skw_core *skw)
 {
 	LIST_HEAD(flush_list);
 
-	del_timer(&skw->timer_data.timer);
+	skw_del_timer(&skw->timer_data.timer);
 
 	spin_lock_bh(&skw->timer_data.lock);
 	list_replace_init(&skw->timer_data.list, &flush_list);

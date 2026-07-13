@@ -1,5 +1,6 @@
 #include <linux/ctype.h>
 #include <linux/firmware.h>
+#include <linux/string.h>
 
 #include "skw_util.h"
 #include "skw_config.h"
@@ -64,7 +65,7 @@ static void skw_parser(struct skwifi_cfg *table, const u8 *data, int size)
 				word[nr] = '\0';
 
 				flags |= BIT(0);
-				strlcpy(skw_key, word, sizeof(skw_key));
+				strscpy(skw_key, word, sizeof(skw_key));
 			} else {
 				do_save = true;
 			}
@@ -307,10 +308,10 @@ static int skw_calib_parser(struct skwifi_cfg *config, char *key, char *data)
 		}
 
 	} else if (!strcmp(key, "chip")) {
-		strlcpy(calib->chip, data, sizeof(calib->chip) - 1);
+		strscpy(calib->chip, data, sizeof(calib->chip));
 
 	} else if (!strcmp(key, "project")) {
-		strlcpy(calib->project, data, sizeof(calib->project) - 1);
+		strscpy(calib->project, data, sizeof(calib->project));
 
 	} else {
 		skw_dbg("unsupport key: %s\n", key);

@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: U-Boot console on UART0 (vendor debug port)
+
+ATF reports "Preloader serial: 0": the visible debug port is UART0 at
+0x2AD40000, not UART2. Point stdout-path at serial0 and disable UART2
+which shares pins with SPI flash (sfc1).
+---
+--- a/dts/upstream/src/arm64/rockchip/rk3576-mc-neardi-lb200.dts
++++ b/dts/upstream/src/arm64/rockchip/rk3576-mc-neardi-lb200.dts
+@@ -17,7 +17,7 @@
+ 	compatible = "neardi,rk3576-lb200", "rockchip,rk3576";
+ 
+ 	chosen {
+-		stdout-path = "serial2:1500000n8";
++		stdout-path = "serial0:1500000n8";
+ 	};
+ };
+ 
+@@ -31,6 +31,10 @@
+ 	status = "okay";
+ };
+ 
+-&uart2 {
++&uart0 {
+ 	status = "okay";
+ };
++
++&uart2 {
++	status = "disabled";
++};
+--- a/arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi
++++ b/arch/arm/dts/rk3576-mc-neardi-lb200-u-boot.dtsi
+@@ -15,6 +15,12 @@
+ 	cap-mmc-highspeed;
+ };
+ 
++&uart0 {
++	clock-frequency = <24000000>;
++	bootph-all;
++	u-boot,dm-pre-reloc;
++};
++
+ &uart2 {
+ 	clock-frequency = <24000000>;
+ 	bootph-all;

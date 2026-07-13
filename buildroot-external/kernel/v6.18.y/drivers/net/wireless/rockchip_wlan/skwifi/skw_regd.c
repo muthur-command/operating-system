@@ -3332,7 +3332,6 @@ static ssize_t skw_regd_write(struct file *fp, const char __user *buf,
 }
 
 static const struct file_operations skw_regd_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_regd_open,
 	.read = seq_read,
 	.write = skw_regd_write,

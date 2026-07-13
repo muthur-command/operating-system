@@ -1,0 +1,91 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: SPL eMMC handoff for U-Boot proper
+
+After vendor SPL initializes eMMC, a full card re-init in U-Boot proper
+hangs on power_cycle/CMD0/CMD6. Reuse the SPL-initialized card when
+u-boot,spl-fifo-mode is set.
+---
+--- a/drivers/mmc/mmc.c
++++ b/drivers/mmc/mmc.c
+@@ -2949,6 +2949,52 @@
+ 	return ret;
+ }
+ 
++
++#if CONFIG_IS_ENABLED(DM_MMC) && !defined(CONFIG_XPL_BUILD)
++static int mmc_try_spl_handoff(struct mmc *mmc)
++{
++	ALLOC_CACHE_ALIGN_BUFFER(u8, ext_csd, MMC_MAX_BLOCK_LEN);
++	u64 capacity;
++	int err;
++
++	if (!mmc->dev || !dev_read_bool(mmc->dev, "u-boot,spl-fifo-mode"))
++		return -EOPNOTSUPP;
++
++	mmc->high_capacity = 1;
++	mmc->read_bl_len = MMC_MAX_BLOCK_LEN;
++#if CONFIG_IS_ENABLED(MMC_WRITE)
++	mmc->write_bl_len = MMC_MAX_BLOCK_LEN;
++#endif
++	mmc->rca = 1;
++
++	err = mmc_send_ext_csd(mmc, ext_csd);
++	if (err)
++		return err;
++
++	capacity = (u64)ext_csd[EXT_CSD_SEC_CNT] |
++		   (u64)ext_csd[EXT_CSD_SEC_CNT + 1] << 8 |
++		   (u64)ext_csd[EXT_CSD_SEC_CNT + 2] << 16 |
++		   (u64)ext_csd[EXT_CSD_SEC_CNT + 3] << 24;
++	capacity *= MMC_MAX_BLOCK_LEN;
++	mmc->capacity_user = capacity;
++	mmc->capacity = capacity;
++	mmc_get_blk_desc(mmc)->blksz = mmc->read_bl_len;
++	mmc_get_blk_desc(mmc)->log2blksz = LOG2(mmc->read_bl_len);
++	mmc_get_blk_desc(mmc)->lba = lldiv(mmc->capacity, mmc->read_bl_len);
++
++	/* Card left in HS mode by vendor SPL; ddr_mode skips illegal CMD16 */
++	mmc->ddr_mode = 1;
++	mmc->has_init = 1;
++	return 0;
++}
++
++static bool mmc_spl_handoff_done(struct mmc *mmc)
++{
++	return mmc->has_init && mmc->dev &&
++	       dev_read_bool(mmc->dev, "u-boot,spl-fifo-mode");
++}
++#endif
++
+ int mmc_get_op_cond(struct mmc *mmc, bool quiet)
+ {
+ 	bool uhs_en = supports_uhs(mmc->cfg->host_caps);
+@@ -2957,6 +3003,14 @@ int mmc_get_op_cond(struct mmc *mmc, bool quiet)
+ 	if (mmc->has_init)
+ 		return 0;
+ 
++#if CONFIG_IS_ENABLED(DM_MMC) && !defined(CONFIG_XPL_BUILD)
++	err = mmc_try_spl_handoff(mmc);
++	if (!err)
++		return 0;
++	if (err != -EOPNOTSUPP)
++		return err;
++#endif
++
+ 	err = mmc_power_init(mmc);
+ 	if (err)
+ 		return err;
+@@ -3100,6 +3154,12 @@ static int mmc_complete_init(struct mmc *mmc)
+ 	int err = 0;
+ 
+ 	mmc->init_in_progress = 0;
++
++#if CONFIG_IS_ENABLED(DM_MMC) && !defined(CONFIG_XPL_BUILD)
++	if (mmc_spl_handoff_done(mmc))
++		return 0;
++#endif
++
+ 	if (mmc->op_cond_pending)
+ 		err = mmc_complete_op_cond(mmc);
+ 

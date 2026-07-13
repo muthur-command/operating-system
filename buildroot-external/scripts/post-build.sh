@@ -42,11 +42,23 @@ setup_vconsole
 ) > "${TARGET_DIR}/etc/machine-info"
 
 
-# Setup RAUC
-prepare_rauc_signing
-write_rauc_config
-install_rauc_certs
-install_bootloader_config
+# Setup RAUC / Rockchip OTA
+if [ "${OTA_BACKEND:-rauc}" = "rauc" ]; then
+    prepare_rauc_signing
+    write_rauc_config
+    install_rauc_certs
+    install_bootloader_config
+elif [ -f "${BOARD_DIR}/post-build.sh" ]; then
+    # shellcheck disable=SC1090
+    . "${BOARD_DIR}/post-build.sh"
+fi
 
 # Fix overlay presets
 "${HOST_DIR}/bin/systemctl" --root="${TARGET_DIR}" preset-all
+
+# Board masks must run after preset-all (masking before preset causes harmless
+# "Failed to preset unit" noise and can confuse builders).
+if [ -f "${BOARD_DIR}/post-preset.sh" ]; then
+    # shellcheck disable=SC1090
+    . "${BOARD_DIR}/post-preset.sh"
+fi

@@ -1,0 +1,44 @@
+/dts-v1/;
+
+/ {
+	description = "MCOS Neardi LB200 Linux FIT image";
+	#address-cells = <1>;
+
+	images {
+		kernel {
+			data = /incbin/("@KERNEL_IMG@");
+			type = "kernel";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x42000000>;
+			entry = <0x42000000>;
+
+			hash {
+				algo = "sha256";
+			};
+		};
+
+		fdt {
+			data = /incbin/("@KERNEL_DTB@");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x52000000>;
+
+			hash {
+				algo = "sha256";
+			};
+		};
+	};
+
+	configurations {
+		default = "conf";
+
+		conf {
+			description = "MCOS LB200";
+			kernel = "kernel";
+			fdt = "fdt";
+		};
+	};
+};

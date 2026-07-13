@@ -16,6 +16,7 @@
  ******************************************************************************/
 
 #include "skw_iface.h"
+#include "skw_compat.h"
 #include <linux/ieee80211.h>
 #include <net/cfg80211.h>
 #include <linux/inetdevice.h>
@@ -877,10 +878,7 @@ void skw_dfs_stop_cac_event(struct wiphy *wiphy, struct skw_iface *iface)
 	skw_cmd_dfs_stop_cac(wiphy, iface->ndev);
 	skw_dfs_release_domain(ctxt);
 
-	cfg80211_cac_event(iface->ndev,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
-			&ctxt->chan_def,
-#endif
+	skw_compat_cfg80211_cac_event(iface->ndev, &ctxt->chan_def,
 			NL80211_RADAR_CAC_FINISHED, GFP_KERNEL);
 
 }

@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000036 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Fri, 3 Jul 2026 17:40:00 +0800
+Subject: [PATCH] iommu: rockchip: support BSP iommu-v2 nodes (compatible +
+ clocks)
+
+The RK3576 BSP multimedia devicetree declares the MPP/RGA/NPU MMUs as
+"rockchip,iommu-v2", which the vendor 6.1 driver binds with the same v2
+ops as "rockchip,rk3568-iommu". Add the compatible so those MMUs probe
+on mainline.
+
+The vendor driver also acquires clocks with devm_clk_bulk_get_all()
+while mainline requires clocks named "aclk"/"iface". BSP nodes break
+that assumption: rknpu_mmu uses "aclk0"/"aclk1"/"a_iface"/"h_iface" and
+jpeg_mmu misspells the property as "clock-name". With named lookup both
+MMUs probed with zero clocks and the first register access on an
+ungated clock hung the bus right after the mpp-iep2 probe. Switch to
+devm_clk_bulk_get_all() to match vendor behaviour.
+
+Signed-off-by: mortyzhaoyu <morty.zhaoyu@gmail.com>
+---
+ drivers/iommu/rockchip-iommu.c | 39 +++++++++++++++------------------
+ 1 file changed, 18 insertions(+), 21 deletions(-)
+
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -93,11 +93,6 @@
+ 	struct iommu_domain domain;
+ };
+ 
+-/* list of clocks required by IOMMU */
+-static const char * const rk_iommu_clocks[] = {
+-	"aclk", "iface",
+-};
+-
+ struct rk_iommu_ops {
+ 	phys_addr_t (*pt_address)(u32 dte);
+ 	u32 (*mk_dtentries)(dma_addr_t pt_dma);
+@@ -1365,25 +1360,20 @@
+ 	iommu->reset_disabled = device_property_read_bool(dev,
+ 					"rockchip,disable-mmu-reset");
+ 
+-	iommu->num_clocks = ARRAY_SIZE(rk_iommu_clocks);
+-	iommu->clocks = devm_kcalloc(iommu->dev, iommu->num_clocks,
+-				     sizeof(*iommu->clocks), GFP_KERNEL);
+-	if (!iommu->clocks)
+-		return -ENOMEM;
+-
+-	for (i = 0; i < iommu->num_clocks; ++i)
+-		iommu->clocks[i].id = rk_iommu_clocks[i];
+-
+ 	/*
+-	 * iommu clocks should be present for all new devices and devicetrees
+-	 * but there are older devicetrees without clocks out in the wild.
+-	 * So clocks as optional for the time being.
++	 * Rockchip BSP devicetrees (e.g. the RK3576 multimedia block) carry
++	 * IOMMU clocks under non-standard names ("aclk0"/"aclk1"/... on
++	 * rknpu_mmu) or with a broken "clock-name" property (jpeg_mmu).
++	 * Match the vendor driver and grab all clocks regardless of names;
++	 * clocks stay optional for old devicetrees without any.
+ 	 */
+-	err = devm_clk_bulk_get(iommu->dev, iommu->num_clocks, iommu->clocks);
++	err = devm_clk_bulk_get_all(iommu->dev, &iommu->clocks);
+ 	if (err == -ENOENT)
+ 		iommu->num_clocks = 0;
+-	else if (err)
++	else if (err < 0)
+ 		return err;
++	else
++		iommu->num_clocks = err;
+ 
+ 	err = clk_bulk_prepare(iommu->num_clocks, iommu->clocks);
+ 	if (err)
+@@ -1488,6 +1478,10 @@
+ 	{	.compatible = "rockchip,rk3568-iommu",
+ 		.data = &iommu_data_ops_v2,
+ 	},
++	/* Rockchip BSP devicetrees (RK3576/RK3588 multimedia) use this name */
++	{	.compatible = "rockchip,iommu-v2",
++		.data = &iommu_data_ops_v2,
++	},
+ 	{ /* sentinel */ }
+ };
+ 

@@ -17,6 +17,12 @@
 
 #include <linux/skbuff.h>
 
+#ifdef CONFIG_RPS
+#include <linux/cpumask.h>
+#include <net/netdev_rx_queue.h>
+#include <net/rps.h>
+#endif
+
 #include "skw_core.h"
 #include "skw_cfg80211.h"
 #include "skw_iface.h"
@@ -86,7 +92,7 @@ int skw_init_rps_map(struct skw_iface *iface, int unmask)
 	int i, cpu;
 	struct rps_map *map, *old_map;
 	static DEFINE_SPINLOCK(rps_map_lock);
-	struct netdev_rx_queue *queue = iface->ndev->_rx;
+	struct netdev_rx_queue *queue = __netif_get_rx_queue(iface->ndev, 0);
 
 	map = kzalloc(max_t(unsigned int,
 			    RPS_MAP_SIZE(cpumask_weight(cpu_online_mask)), L1_CACHE_BYTES),
@@ -114,18 +120,26 @@ int skw_init_rps_map(struct skw_iface *iface, int unmask)
 	spin_unlock(&rps_map_lock);
 
 	if (map) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+		static_branch_inc(&rps_needed);
+#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
 		static_key_slow_inc(&rps_needed.key);
 #else
 		static_key_slow_inc(&rps_needed);
 #endif
+#endif
 	}
 
 	if (old_map) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+		static_branch_dec(&rps_needed);
+#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
 		static_key_slow_dec(&rps_needed.key);
 #else
 		static_key_slow_dec(&rps_needed);
+#endif
 #endif
 		kfree_rcu(old_map, rcu);
 	}

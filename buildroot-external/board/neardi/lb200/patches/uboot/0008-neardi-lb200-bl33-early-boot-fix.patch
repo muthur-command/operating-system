@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: BL33 early SP before C runtime
+
+Set SP to a safe DRAM address before apply_core_errata when BL33 is loaded
+by vendor SPL/ATF.
+---
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -54,9 +54,15 @@
+ 
+ reset:
+ 	/* Allow the board to save important registers */
++#if defined(CONFIG_XPL_BUILD)
+ 	b	save_boot_params
++#endif
+ .globl	save_boot_params_ret
+ save_boot_params_ret:
++#if defined(CONFIG_ROCKCHIP_RK3576) && !defined(CONFIG_XPL_BUILD)
++	ldr	x0, =0x43f00000
++	mov	sp, x0
++#endif
+ 
+ #if CONFIG_POSITION_INDEPENDENT && !defined(CONFIG_XPL_BUILD)
+ 	/* Verify that we're 4K aligned.  */

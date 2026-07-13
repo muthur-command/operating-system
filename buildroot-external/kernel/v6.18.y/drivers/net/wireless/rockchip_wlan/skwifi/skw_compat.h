@@ -24,6 +24,44 @@
 #include <linux/proc_fs.h>
 #include <linux/rtc.h>
 #include <linux/etherdevice.h>
+#include <linux/timer.h>
+#include <linux/netdevice.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0)
+#define skw_del_timer(timer)			timer_delete(timer)
+#define skw_del_timer_sync(timer)		timer_delete_sync(timer)
+#else
+#define skw_del_timer(timer)			del_timer(timer)
+#define skw_del_timer_sync(timer)		del_timer_sync(timer)
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+static inline struct net_device *skw_alloc_dummy_netdev(void)
+{
+	return alloc_netdev_dummy(0);
+}
+
+static inline void skw_free_dummy_netdev(struct net_device *dev)
+{
+	free_netdev(dev);
+}
+#else
+static inline struct net_device *skw_alloc_dummy_netdev(void)
+{
+	struct net_device *dev;
+
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (dev)
+		init_dummy_netdev(dev);
+
+	return dev;
+}
+
+static inline void skw_free_dummy_netdev(struct net_device *dev)
+{
+	kfree(dev);
+}
+#endif
 
 /* EID block */
 #define SKW_WLAN_EID_EXT_HE_CAPABILITY                            35
@@ -264,7 +302,21 @@ static inline void skw_compat_rx_assoc_resp(struct net_device *dev,
 			struct cfg80211_bss *bss, const u8 *buf, size_t len,
 			int uapsd, const u8 *req_ies, size_t req_ies_len)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
+	struct cfg80211_rx_assoc_resp_data assoc_resp = {
+		.buf = buf,
+		.len = len,
+		.req_ies = req_ies,
+		.req_ies_len = req_ies_len,
+		.uapsd_queues = uapsd,
+		.ap_mld_addr = NULL,
+	};
+
+	if (bss)
+		assoc_resp.links[0].bss = bss;
+
+	cfg80211_rx_assoc_resp(dev, &assoc_resp);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 	struct cfg80211_rx_assoc_resp assoc_resp = {
 		.buf = buf,
 		.len = len,
@@ -463,6 +515,19 @@ static inline void skw_ch_switch_started_notify(struct net_device *dev,
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
 	cfg80211_ch_switch_started_notify(dev, chandef, count);
 #else
+#endif
+}
+
+static inline void skw_compat_cfg80211_cac_event(struct net_device *netdev,
+		const struct cfg80211_chan_def *chandef,
+		enum nl80211_radar_event event, gfp_t gfp)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+	cfg80211_cac_event(netdev, chandef, event, gfp, 0);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+	cfg80211_cac_event(netdev, chandef, event, gfp);
+#else
+	cfg80211_cac_event(netdev, event, gfp);
 #endif
 }
 

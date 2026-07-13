@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: skip full SDHCI re-init after vendor SPL
+
+Vendor SPL leaves eMMC running.  sdhci_set_power() and register setup in
+U-Boot proper can still hang even when the controller reset is skipped.
+---
+--- a/drivers/mmc/sdhci.c
++++ b/drivers/mmc/sdhci.c
+@@ -722,23 +722,18 @@
+ 	gpio_request_by_name(dev, "cd-gpios", 0,
+ 			     &host->cd_gpio, GPIOD_IS_IN);
+ #endif
+ 
+ 	/*
+-	 * Rockchip vendor SPL already initialized eMMC via SDHCI.  A full
+-	 * controller reset in U-Boot proper can hang when u-boot,spl-fifo-mode
+-	 * is set (see rockchip_sdhci.c).
++	 * Vendor SPL already initialized eMMC.  Re-init in U-Boot proper hangs.
+ 	 */
+ #if CONFIG_IS_ENABLED(DM_MMC)
+ 	if (!IS_ENABLED(CONFIG_XPL_BUILD) && mmc->dev &&
+ 	    dev_read_bool(mmc->dev, "u-boot,spl-fifo-mode"))
+-		goto skip_init_reset;
++		return 0;
+ #endif
+ 	sdhci_reset(host, SDHCI_RESET_ALL);
+-#if CONFIG_IS_ENABLED(DM_MMC)
+-skip_init_reset:
+-#endif
+ 
+ #if defined(CONFIG_FIXED_SDHCI_ALIGNED_BUFFER)
+ 	host->align_buffer = (void *)CONFIG_FIXED_SDHCI_ALIGNED_BUFFER;
+ 	/*
+ 	 * Always use this bounce-buffer when CONFIG_FIXED_SDHCI_ALIGNED_BUFFER

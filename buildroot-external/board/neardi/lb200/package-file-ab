@@ -1,0 +1,14 @@
+# NAME		PATH
+# Paths are relative to the Image/ directory (same layout as Rockchip SDK).
+package-file	package-file
+bootloader	MiniLoaderAll.bin
+parameter	parameter.txt
+uboot		uboot.img
+misc		misc.img
+boot_a		boot.img
+boot_b		boot.img
+system_a	rootfs.img
+system_b	rootfs.img
+oem		oem.img
+userdata	userdata.img
+backup		RESERVED

@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000004 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Sat, 4 Jul 2026 00:00:00 +0000
+Subject: [PATCH] neardi lb200: fix GMAC and Seekwave WiFi device tree
+
+- Drop phy-supply from GMAC (YT8521 uses always-on rails; optional regulator
+  support is added in kernel patch 0040)
+- Add seekwave,sv6160 boot node required by skw_sdio_v20
+---
+ arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi  | 2 --
+ arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi | 9 +++++++++
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi
+index 1111111..2222222 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi
+@@ -9,7 +9,6 @@
+ &gmac0 {
+ 	phy-mode = "rgmii-rxid";
+ 	clock_in_out = "output";
+-	phy-supply = <&vcc_3v3_s0>;
+ 	snps,reset-gpio = <&gpio2 RK_PB3 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+ 	snps,reset-delays-us = <0 20000 100000>;
+@@ -28,7 +27,6 @@
+ &gmac1 {
+ 	phy-mode = "rgmii-rxid";
+ 	clock_in_out = "output";
+-	phy-supply = <&vcc_3v3_s0>;
+ 	snps,reset-gpio = <&gpio2 RK_PB4 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+ 	snps,reset-delays-us = <0 20000 100000>;
+diff --git a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi
+index 3333333..4444444 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-wifibt.dtsi
+@@ -14,6 +14,15 @@
+ 		post-power-on-delay-ms = <200>;
+ 		reset-gpios = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
+ 	};
++
++	seekwcn_boot: seekwcn-boot {
++		compatible = "seekwave,sv6160";
++		dma_type = <1>;
++		skw_iram_path = "/lib/firmware/ROM_EXEC_KERNEL_IRAM.bin";
++		skw_dram_path = "/lib/firmware/RAM_RW_KERNEL_DRAM.bin";
++		seekwave_nv_name = "SEEKWAVE_NV_SWT6652.bin";
++		status = "okay";
++	};
+ };
+ 
+ &sdio {
+-- 
+2.34.1

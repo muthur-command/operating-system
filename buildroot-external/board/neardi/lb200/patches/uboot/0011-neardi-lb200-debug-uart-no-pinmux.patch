@@ -1,0 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: skip IOC pinmux in board_debug_uart_init
+
+Vendor SPL/ATF already muxed the debug UART; avoid TOP_IOC MMIO in BL33.
+---
+--- a/arch/arm/mach-rockchip/rk3576/rk3576.c
++++ b/arch/arm/mach-rockchip/rk3576/rk3576.c
+@@ -90,6 +90,8 @@ struct mm_region *mem_map = rk3576_mem_map;
+ 
+ void board_debug_uart_init(void)
+ {
++	/* Vendor SPL/ATF already configured the debug UART pins */
++	return;
+ }
+ 
+ u32 read_brom_bootsource_id(void)

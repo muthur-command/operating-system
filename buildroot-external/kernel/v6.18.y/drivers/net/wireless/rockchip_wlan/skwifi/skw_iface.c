@@ -181,7 +181,6 @@ static const struct proc_ops skw_iface_fops = {
 };
 #else
 static const struct file_operations skw_iface_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_iface_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -629,7 +628,7 @@ static void skw_mode_deinit(struct wiphy *wiphy, struct skw_iface *iface,
 			SKW_KFREE(iface->sta.conn);
 		}
 
-		del_timer_sync(&iface->sta.core.timer);
+		skw_del_timer_sync(&iface->sta.core.timer);
 		cancel_work_sync(&iface->sta.work);
 
 		skw_set_state(&iface->sta.core.sm, SKW_STATE_NONE);

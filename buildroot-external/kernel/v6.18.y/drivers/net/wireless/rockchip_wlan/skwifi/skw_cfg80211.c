@@ -28,6 +28,7 @@
 #include "skw_regd.h"
 #include "skw_mlme.h"
 #include "skw_timer.h"
+#include "skw_util.h"
 #include "skw_work.h"
 #include "skw_tdls.h"
 #include "skw_calib.h"
@@ -1521,7 +1522,9 @@ static int skw_start_ap(struct wiphy *wiphy, struct net_device *dev,
 	iface->sap.ht_required = settings->ht_required;
 	iface->sap.vht_required = settings->vht_required;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
 	iface->sap.cfg.crypto.wep_keys = NULL;
+#endif
 	iface->sap.cfg.crypto.psk = NULL;
 #else
 	iface->sap.cfg.ht_cap = NULL;
@@ -1652,7 +1655,7 @@ static int skw_stop_ap(struct wiphy *wiphy,
 	return 0;
 }
 
-static int skw_change_beacon(struct wiphy *wiphy, struct net_device *dev,
+static int skw_change_beacon_data(struct wiphy *wiphy, struct net_device *dev,
 				struct cfg80211_beacon_data *bcn)
 {
 	int ret = -1;
@@ -1718,6 +1721,20 @@ static int skw_change_beacon(struct wiphy *wiphy, struct net_device *dev,
 
 	return ret;
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+static int skw_change_beacon(struct wiphy *wiphy, struct net_device *dev,
+				struct cfg80211_ap_update *info)
+{
+	return skw_change_beacon_data(wiphy, dev, &info->beacon);
+}
+#else
+static int skw_change_beacon(struct wiphy *wiphy, struct net_device *dev,
+				struct cfg80211_beacon_data *bcn)
+{
+	return skw_change_beacon_data(wiphy, dev, bcn);
+}
+#endif
 
 void skw_set_state(struct skw_sm *sm, enum SKW_STATES state)
 {
@@ -2035,7 +2052,7 @@ static int skw_get_station(struct wiphy *wiphy, struct net_device *dev,
 
 	memset(&get_sta_resp, 0, sizeof(get_sta_resp));
 
-	ts = local_clock();
+	ts = skw_local_clock();
 	do_div(ts, 1000000);
 	params.timestamp = ts;
 	skw_ether_copy(params.mac, mac);
@@ -3072,7 +3089,7 @@ int skw_sta_leave(struct wiphy *wiphy, struct net_device *dev,
 
 	memset(&iface->wmm, 0x0, sizeof(iface->wmm));
 
-	del_timer_sync(&iface->sta.core.timer);
+	skw_del_timer_sync(&iface->sta.core.timer);
 
 	skw_set_state(&iface->sta.core.sm, SKW_STATE_NONE);
 	iface->sta.core.sm.flags = 0;
@@ -3199,7 +3216,7 @@ static int skw_auth(struct wiphy *wiphy, struct net_device *ndev,
 	if (ret) {
 		skw_dbg("command auth failed, ret: %d\n", ret);
 
-		del_timer_sync(&iface->sta.core.timer);
+		skw_del_timer_sync(&iface->sta.core.timer);
 		goto unjoin;
 	}
 
@@ -3298,7 +3315,7 @@ static int skw_assoc(struct wiphy *wiphy, struct net_device *dev,
 
 		core->cbss = NULL;
 
-		del_timer_sync(&core->timer);
+		skw_del_timer_sync(&core->timer);
 
 		skw_unjoin(wiphy, dev, req->bss->bssid, SKW_LEAVE, false);
 		skw_set_state(&core->sm, SKW_STATE_NONE);
@@ -4060,8 +4077,15 @@ static int skw_leave_ibss(struct wiphy *wiphy, struct net_device *dev)
 			&params, sizeof(params), NULL, 0);
 }
 
-static int skw_set_wiphy_params(struct wiphy *wiphy, u32 changed)
+static int skw_set_wiphy_params(struct wiphy *wiphy,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
+				int radio_idx,
+#endif
+				u32 changed)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0)
+	(void)radio_idx;
+#endif
 	int ret = 0;
 	u16 *plen;
 	struct skw_tlv_conf conf;
@@ -4327,7 +4351,7 @@ static void skw_mgmt_frame_register(struct wiphy *wiphy,
 
 		param.frame_type = frame_mtype;
 		param.reg = reg;
-		ts = local_clock();
+		ts = skw_local_clock();
 		do_div(ts, 1000000);
 
 		param.timestamp = ts;
@@ -4367,7 +4391,7 @@ static void skw_mgmt_frame_register(struct wiphy *wiphy,
 
 	param.frame_type = frame_type;
 	param.reg = reg;
-	ts = local_clock();
+	ts = skw_local_clock();
 	do_div(ts, 1000000);
 
 	param.timestamp = ts;
@@ -4872,8 +4896,14 @@ static int skw_change_bss(struct wiphy *wiphy, struct net_device *ndev,
 }
 
 static int skw_set_monitor_channel(struct wiphy *wiphy,
-		struct cfg80211_chan_def *chandef)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+				       struct net_device *dev,
+#endif
+				       struct cfg80211_chan_def *chandef)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+	(void)dev;
+#endif
 	return skw_cmd_monitor(wiphy, chandef, SKW_MONITOR_COMMON);
 }
 
@@ -5018,8 +5048,15 @@ static int skw_update_ft_ies(struct wiphy *wiphy, struct net_device *dev,
 #ifdef CONFIG_SKW6316_DFS_MASTER
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
 static int skw_start_radar_detection(struct wiphy *wiphy, struct net_device *ndev,
-				struct cfg80211_chan_def *chandef, u32 cac_time_ms)
+				struct cfg80211_chan_def *chandef, u32 cac_time_ms
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+				, int link_id
+#endif
+				)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+	(void)link_id;
+#endif
 	struct skw_iface *iface = netdev_priv(ndev);
 	struct skw_dfs_start_detector_param param;
 
@@ -5049,7 +5086,11 @@ static int skw_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
 			 const
 #endif
-			 u8 *peer, u8 action, u8 token, u16 status,
+			 u8 *peer,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+			 int link_id,
+#endif
+			 u8 action, u8 token, u16 status,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)
 			 u32 peer_capability,
 #endif
@@ -5061,6 +5102,10 @@ static int skw_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	u32 capa = 0;
 	bool tdls_initiator = false;
 	struct skw_core *skw = wiphy_priv(wiphy);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+	(void)link_id;
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)
 	capa = peer_capability;

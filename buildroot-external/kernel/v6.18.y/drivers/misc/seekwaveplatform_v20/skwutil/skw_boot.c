@@ -223,7 +223,6 @@ ret:
 static int seekwave_boot_parse_dt(struct platform_device *pdev, struct seekwave_device *boot_data)
 {
 	int ret = 0;
-	enum of_gpio_flags flags;
 	struct device_node *np = pdev->dev.of_node;
 	/*add the dma type dts config*/
 	if (of_property_read_u32(np, "bt_antenna", &(boot_data->bt_antenna))){
@@ -254,9 +253,9 @@ static int seekwave_boot_parse_dt(struct platform_device *pdev, struct seekwave_
             skwboot_err("%s: dram path fail ret=%d\n",__func__,ret);
         }
 
-        boot_data->host_gpio = of_get_named_gpio_flags(np, "gpio_host_wake", 0, &flags);
-		boot_data->chip_gpio = of_get_named_gpio_flags(np, "gpio_chip_wake",0, &flags);
-		boot_data->chip_en = of_get_named_gpio_flags(np, "gpio_chip_en",0, &flags);
+        boot_data->host_gpio = of_get_named_gpio(np, "gpio_host_wake", 0);
+		boot_data->chip_gpio = of_get_named_gpio(np, "gpio_chip_wake", 0);
+		boot_data->chip_en = of_get_named_gpio(np, "gpio_chip_en", 0);
 		ret = of_property_read_string(np, "seekwave_nv_name",(const char **)&(boot_data->skw_nv_name));
 		if(ret < 0){
 			skwboot_err("%s:nv name get fail ret=%d\n",__func__, ret);
@@ -586,7 +585,7 @@ static int seekwave_boot_probe(struct  platform_device *pdev)
  *Date:
  *Modify:
  **************************************************************************/
-static int seekwave_boot_remove(struct  platform_device *pdev)
+static void seekwave_boot_remove(struct platform_device *pdev)
 {
 	skwboot_log("%s the Enter \n", __func__);
 
@@ -617,7 +616,6 @@ static int seekwave_boot_remove(struct  platform_device *pdev)
 		boot_data=NULL;
 	}
 	mutex_destroy(&boot_mutex);
-	return 0;
 }
 extern void skw_modem_log_stop_rec(void);
 static void seekwave_boot_shutdown(struct platform_device *pdev)
@@ -635,7 +633,6 @@ static const struct of_device_id seekwave_match_table[] ={
 static struct platform_driver seekwave_driver ={
 
 	.driver = {
-		.owner = THIS_MODULE,
 		.name  = "sv6160",
 		.of_match_table = seekwave_match_table,
 	},

@@ -115,7 +115,6 @@ static ssize_t skw_repeater_write(struct file *fp, const char __user *buf,
 }
 
 static const struct file_operations skw_repeater_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_repeater_open,
 	.read = seq_read,
 	.release = single_release,
@@ -411,14 +410,12 @@ static const struct proc_ops skw_debug_info_fops = {
 };
 #else
 static const struct file_operations skw_core_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_core_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
 static const struct file_operations skw_debug_info_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_debug_info_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -447,7 +444,6 @@ static ssize_t skw_assert_write(struct file *fp, const char __user *buf,
 }
 
 static const struct file_operations skw_assert_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_assert_open,
 	.read = seq_read,
 	.write = skw_assert_write,
@@ -1562,7 +1558,7 @@ int skw_sync_chip_info(struct wiphy *wiphy, struct skw_chip_info *chip)
 	int i, ret;
 	const char *chipid;
 	int vendor, revision;
-	u64 ts = local_clock();
+	u64 ts = skw_local_clock();
 	struct skw_core *skw = wiphy_priv(wiphy);
 
 	skw->fw.host_timestamp = ts;
@@ -1745,21 +1741,13 @@ static void skw_buffer_deinit(struct skw_core *skw)
 
 static struct wakeup_source *skw_wakeup_source_init(const char *name)
 {
-	struct wakeup_source *ws;
-
-	ws = wakeup_source_create(name);
-	if (ws)
-		wakeup_source_add(ws);
-
-	return ws;
+	return wakeup_source_register(NULL, name);
 }
 
 static void skw_wakeup_source_deinit(struct wakeup_source *ws)
 {
-	if (ws) {
-		wakeup_source_remove(ws);
-		wakeup_source_destroy(ws);
-	}
+	if (ws)
+		wakeup_source_unregister(ws);
 }
 
 static void skw_hw_hal_init(struct skw_core *skw, struct sv6160_platform_data *pdata)
@@ -2587,7 +2575,7 @@ failed:
 	return ret;
 }
 
-static int skw_drv_remove(struct platform_device *pdev)
+static void skw_drv_remove(struct platform_device *pdev)
 {
 	int i;
 	struct wiphy *wiphy;
@@ -2596,7 +2584,7 @@ static int skw_drv_remove(struct platform_device *pdev)
 	skw_info("%s\n", pdev->name);
 
 	if (!skw)
-		return 0;
+		return;
 
 	wiphy = priv_to_wiphy(skw);
 
@@ -2630,15 +2618,12 @@ static int skw_drv_remove(struct platform_device *pdev)
 	wiphy_free(wiphy);
 
 	atomic_dec(&skw_chip_idx);
-
-	return 0;
 }
 
 static struct platform_driver skw_drv = {
 	.probe = skw_drv_probe,
 	.remove = skw_drv_remove,
 	.driver = {
-		.owner = THIS_MODULE,
 		.name = "sv6316_wireless1",
 	},
 };

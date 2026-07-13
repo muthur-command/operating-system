@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000038 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Sat, 4 Jul 2026 10:00:00 +0800
+Subject: [PATCH] rga3: skip iommu_set_fault_handler on DMA-IOMMU domains
+
+Linux 6.18 attaches a DMA cookie to IOMMU domains before the RGA initcall
+runs.  iommu_set_fault_handler() only accepts domains with
+IOMMU_COOKIE_NONE and triggers WARN_ON() otherwise.  Guard the call so
+mainline DMA domains skip custom fault-handler registration; RGA hardware
+faults are still handled through the scheduler IRQ path.
+
+Signed-off-by: mortyzhaoyu <morty.zhaoyu@gmail.com>
+---
+ drivers/video/rockchip/rga3/rga_iommu.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+--- a/drivers/video/rockchip/rga3/rga_iommu.c
++++ b/drivers/video/rockchip/rga3/rga_iommu.c
+@@ -348,9 +348,17 @@ int rga_iommu_bind(void)
+ 			if (main_iommu == NULL) {
+ 				main_iommu = scheduler->iommu_info;
+ 				main_iommu_index = i;
+-				iommu_set_fault_handler(main_iommu->domain,
+-							rga_iommu_intr_fault_handler,
+-							(void *)scheduler);
++				/*
++				 * Mainline DMA-IOMMU domains already carry a
++				 * cookie; iommu_set_fault_handler() only accepts
++				 * IOMMU_COOKIE_NONE and would WARN otherwise.
++				 * RGA hardware faults are still handled via the
++				 * scheduler IRQ path.
++				 */
++				if (main_iommu->domain->cookie_type == IOMMU_COOKIE_NONE)
++					iommu_set_fault_handler(main_iommu->domain,
++								rga_iommu_intr_fault_handler,
++								(void *)scheduler);
+ 			} else {
+ 				scheduler->iommu_info->domain = main_iommu->domain;
+ 				scheduler->iommu_info->default_dev = main_iommu->default_dev;

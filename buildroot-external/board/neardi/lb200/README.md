@@ -20,7 +20,44 @@
 | USB | USB-C (DP Alt Mode), USB 3.0 |
 | 其他 | CAN, RS485, PCIe, RTC |
 
-## 目录结构
+## Rockchip SDK 分区与镜像（LB200 专用）
+
+LB200 使用 **Rockchip `parameter-ab.txt` 布局**，不再生成 MCOS 通用 `mcos-*.raucb` 镜像。相关工具与源码已 vendoring 到 `buildroot-external/package/`：
+
+- `rockchip-recovery` — `updateEngine` 源码
+- `rockchip-pack` — `afptool`、`rkImageMaker`、`boot_merger` + RK3576 `rkbin`
+
+构建时启用 `BR2_PACKAGE_HOST_ROCKCHIP_PACK`（已在 `mc_neardi_lb200_defconfig` 中打开），**无需** `mc_platform/rockchip_sdk`。
+
+### 构建产物（`output/images/`）
+
+| 文件 | 用途 |
+|------|------|
+| `mcos_mc-neardi-lb200-<ver>.img` | 整盘 GPT 镜像（`dd` / RKDevTool 下载镜像） |
+| `mcos_mc-neardi-lb200-<ver>-ab.img` | Rockchip `update.img`（RKDevTool 升级固件） |
+| `mcos_mc-neardi-lb200-<ver>-ab-ota.img` | OTA 包（`updateEngine` / U 盘升级） |
+
+### 首次刷机
+
+- **RKDevTool**：加载 `*-ab.img` →「升级固件」
+- 或 **下载镜像**：写入 `mcos_*.img` 整盘镜像
+
+### 日常升级（无 SD 卡）
+
+1. 将 `*-ab-ota.img` 重命名或复制为 U 盘上的 `update-ota.img` 或 `update.img`
+2. 插入 USB Host 口，挂载到 `/mnt/udisk`
+3. 执行：`mcos-udisk-update`  
+   或：`updateEngine --update --image_url=/mnt/udisk/update-ota.img --reboot`
+
+### 分区说明
+
+`uboot` / `misc` / `boot_a|b` / `system_a|b` / `oem` / `userdata`（见 `board/neardi/lb200/parameter-ab.txt`）。  
+根文件系统在 `system_a`，Docker 数据在 `userdata`（兼容层映射到 `/mnt/data`）。
+
+启动链（供应商 SPL 2017.09 + mainline U-Boot 2026）详见
+[`Documentation/lb200-boot-chain.md`](../../../../Documentation/lb200-boot-chain.md)。
+
+---
 
 ```
 buildroot-external/

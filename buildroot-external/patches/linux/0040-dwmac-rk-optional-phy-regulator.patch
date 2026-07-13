@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000040 Mon Sep 17 00:00:00 2001
+From: MC OS <mcos@local>
+Date: Sat, 4 Jul 2026 00:00:00 +0000
+Subject: [PATCH] net: dwmac-rk: make external PHY regulator optional
+
+Neardi LB200 (and mainline rk3576-evb) wire YT8521 PHYs to always-on board
+rails without a phy-supply DT entry.  Requiring devm_regulator_get() caused
+GMAC probe to fail with -ENODEV before any netdev was registered.
+---
+ drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -1468,6 +1468,9 @@ static int phy_power_on(struct rk_priv_data *bsp_priv, bool enable)
+ 	struct device *dev = bsp_priv->dev;
+ 	int ret;
+ 
++	if (!ldo)
++		return 0;
++
+ 	if (enable) {
+ 		ret = regulator_enable(ldo);
+ 		if (ret)
+@@ -1515,11 +1518,12 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
+ 		}
+ 	}
+ 
+-	bsp_priv->regulator = devm_regulator_get(dev, "phy");
++	bsp_priv->regulator = devm_regulator_get_optional(dev, "phy");
+ 	if (IS_ERR(bsp_priv->regulator)) {
+ 		ret = PTR_ERR(bsp_priv->regulator);
+-		dev_err_probe(dev, ret, "failed to get phy regulator\n");
+-		return ERR_PTR(ret);
++		if (ret != -ENODEV)
++			return ERR_PTR(ret);
++		bsp_priv->regulator = NULL;
+ 	}
+ 
+ 	ret = of_property_read_string(dev->of_node, "clock_in_out", &strings);

@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: skip arch_cpu_init MMIO on BL33 handoff
+
+Vendor SPL already configured SGRF; FW_SYS_SGRF MMIO hangs in BL33.
+Skip arch_cpu_init when CONFIG_SKIP_LOWLEVEL_INIT.
+---
+--- a/arch/arm/mach-rockchip/rk3576/rk3576.c
++++ b/arch/arm/mach-rockchip/rk3576/rk3576.c
+@@ -140,6 +140,11 @@ int arch_cpu_init(void)
+ 	if (IS_ENABLED(CONFIG_XPL_BUILD))
+ 		return 0;
+ 
++#if defined(CONFIG_SKIP_LOWLEVEL_INIT)
++	/* Vendor SPL/ATF already configured SGRF; FW_SYS_SGRF MMIO hangs in BL33 */
++	return 0;
++#endif
++
+ 	/* Set the emmc to access ddr memory */
+ 	val = readl(FW_SYS_SGRF_BASE + SGRF_DOMAIN_CON2);
+ 	writel(val | 0x7, FW_SYS_SGRF_BASE + SGRF_DOMAIN_CON2);

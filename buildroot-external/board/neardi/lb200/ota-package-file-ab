@@ -1,0 +1,8 @@
+# NAME		PATH
+package-file	package-file
+parameter	parameter.txt
+boot_a		boot.img
+system_a	rootfs.img
+oem		oem.img
+userdata	userdata.img
+backup		RESERVED

@@ -248,14 +248,26 @@
 	bus-width = <8>;
 	full-pwr-cycle-in-suspend;
 	max-frequency = <200000000>;
-	mmc-hs400-1_8v;
-	mmc-hs400-enhanced-strobe;
+	/*
+	 * HS400(ES) writes fail on mainline: the dwcmshc driver applies
+	 * RK3588 DLL tap values (tx 9 / cmd 8) but RK3576 needs 7/7/5
+	 * (see vendor 6.1 rk3576_drvdata). HS200 uses tap 16 on both,
+	 * so run the eMMC at HS200 instead.
+	 */
+	mmc-hs200-1_8v;
 	no-sdio;
 	no-sd;
 	non-removable;
+	/* Vendor SPL leaves eMMC running; CQE re-init breaks reads in Linux */
+	/delete-property/ supports-cqe;
 	status = "okay";
 };
 
+/*
+ * No SD slot on sdmmc0: its data pins (gpio2 A0/A1) are wired to CAN0
+ * ("pin gpio2-0 already requested by 2ac00000.can"). Vendor DT also
+ * keeps sdmmc disabled.
+ */
 &sdmmc {
 	bus-width = <4>;
 	cap-sd-highspeed;
@@ -268,7 +280,7 @@
 	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_det &sdmmc0_bus4>;
 	sd-uhs-sdr104;
 	vqmmc-supply = <&vccio_sd_s0>;
-	status = "okay";
+	status = "disabled";
 };
 
 &tsadc {
@@ -312,6 +324,14 @@
 	status = "okay";
 };
 
+/*
+ * MPP/RGA/NPU MMUs are "rockchip,iommu-v2"; kernel patch 0036 teaches the
+ * mainline rockchip-iommu driver that compatible (same v2 ops as
+ * rk3568-iommu) and makes it take all DT clocks like the vendor driver
+ * does (rknpu_mmu uses non-standard clock names, jpeg_mmu has a
+ * "clock-name" typo; named lookup left those MMUs unclocked and the
+ * first register access hung the bus).
+ */
 &iep {
 	status = "okay";
 };
@@ -329,6 +349,8 @@
 };
 
 &jpeg_mmu {
+	/* BSP dtsi misspells this as "clock-name"; fix it here */
+	clock-names = "aclk", "iface";
 	status = "okay";
 };
 

@@ -1,0 +1,171 @@
+From 0000000000000000000000000000000000000001 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Fri, 3 Jul 2026 17:45:00 +0800
+Subject: [PATCH] neardi lb200: fix kernel DT for eMMC, pinmux, GMAC, MPP iommu
+
+Boot fixes for Neardi LB200 (RK3576):
+- eMMC: drop CQE (vendor SPL handoff breaks CQHCI) and run at HS200;
+  HS400(ES) writes fail because mainline dwcmshc applies RK3588 DLL
+  tap values (tx 9/cmd 8) while RK3576 needs 7/7/5 (vendor 6.1 drvdata)
+- UART0 console, disable UART2 (pins conflict with sfc1)
+- UART5 use m0 pinmux (m2 shares gpio2 A4/A5 with sdmmc0)
+- Disable sdmmc: no SD slot, data pins are wired to CAN0 (gpio2 A0/A1)
+- Keep MPP/RGA/NPU enabled: their MMUs are "rockchip,iommu-v2", now
+  handled by the mainline rockchip-iommu driver (patch 0036: compatible
+  entry + clk_bulk_get_all). Fix the jpeg_mmu "clock-name" typo here.
+- GMAC phy-supply, enable OTP for tsadc trim
+- Disable pcie0 (not populated) and sfc1 (SPI NOR absent, JEDEC 00 00 00)
+---
+--- a/arch/arm64/boot/dts/rockchip/rk3576-mc-neardi-lb200.dts	2026-07-03 02:27:23.800457738 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576-mc-neardi-lb200.dts	2026-07-03 02:26:47.878206991 -0700
+@@ -35,7 +35,8 @@
+ 	};
+ 
+ 	chosen {
+-		stdout-path = "serial2:1500000n8";
++		/* Vendor firmware debug port is UART0 ("Preloader serial: 0") */
++		stdout-path = "serial0:1500000n8";
+ 	};
+ 
+ 	hdmi-con {
+@@ -56,12 +57,22 @@
+ 	};
+ };
+ 
+-&uart2 {
++/* Debug console; pins already muxed by the vendor SPL, don't remux */
++&uart0 {
+ 	status = "okay";
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&uart2m0_xfer>;
++	/delete-property/ pinctrl-names;
++	/delete-property/ pinctrl-0;
++};
++
++/* Console is UART0; UART2 pins conflict with SPI flash (sfc1 / fspi1m1) */
++&uart2 {
++	status = "disabled";
+ };
+ 
+ &rng {
+ 	status = "okay";
+ };
++
++&otp {
++	status = "okay";
++};
+--- a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi	2026-07-03 02:27:23.801457773 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200.dtsi	2026-07-03 02:44:37.198723514 -0700
+@@ -248,14 +248,26 @@
+ 	bus-width = <8>;
+ 	full-pwr-cycle-in-suspend;
+ 	max-frequency = <200000000>;
+-	mmc-hs400-1_8v;
+-	mmc-hs400-enhanced-strobe;
++	/*
++	 * HS400(ES) writes fail on mainline: the dwcmshc driver applies
++	 * RK3588 DLL tap values (tx 9 / cmd 8) but RK3576 needs 7/7/5
++	 * (see vendor 6.1 rk3576_drvdata). HS200 uses tap 16 on both,
++	 * so run the eMMC at HS200 instead.
++	 */
++	mmc-hs200-1_8v;
+ 	no-sdio;
+ 	no-sd;
+ 	non-removable;
++	/* Vendor SPL leaves eMMC running; CQE re-init breaks reads in Linux */
++	/delete-property/ supports-cqe;
+ 	status = "okay";
+ };
+ 
++/*
++ * No SD slot on sdmmc0: its data pins (gpio2 A0/A1) are wired to CAN0
++ * ("pin gpio2-0 already requested by 2ac00000.can"). Vendor DT also
++ * keeps sdmmc disabled.
++ */
+ &sdmmc {
+ 	bus-width = <4>;
+ 	cap-sd-highspeed;
+@@ -268,7 +280,7 @@
+ 	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_det &sdmmc0_bus4>;
+ 	sd-uhs-sdr104;
+ 	vqmmc-supply = <&vccio_sd_s0>;
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &tsadc {
+@@ -312,6 +324,14 @@
+ 	status = "okay";
+ };
+ 
++/*
++ * MPP/RGA/NPU MMUs are "rockchip,iommu-v2"; kernel patch 0036 teaches the
++ * mainline rockchip-iommu driver that compatible (same v2 ops as
++ * rk3568-iommu) and makes it take all DT clocks like the vendor driver
++ * does (rknpu_mmu uses non-standard clock names, jpeg_mmu has a
++ * "clock-name" typo; named lookup left those MMUs unclocked and the
++ * first register access hung the bus).
++ */
+ &iep {
+ 	status = "okay";
+ };
+@@ -329,6 +349,8 @@
+ };
+ 
+ &jpeg_mmu {
++	/* BSP dtsi misspells this as "clock-name"; fix it here */
++	clock-names = "aclk", "iface";
+ 	status = "okay";
+ };
+ 
+--- a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi	2026-07-03 02:27:23.801457773 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-gmac.dtsi	2026-07-03 02:26:47.883207165 -0700
+@@ -9,6 +9,7 @@
+ &gmac0 {
+ 	phy-mode = "rgmii-rxid";
+ 	clock_in_out = "output";
++	phy-supply = <&vcc_3v3_s0>;
+ 	snps,reset-gpio = <&gpio2 RK_PB3 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+ 	snps,reset-delays-us = <0 20000 100000>;
+@@ -27,6 +28,7 @@
+ &gmac1 {
+ 	phy-mode = "rgmii-rxid";
+ 	clock_in_out = "output";
++	phy-supply = <&vcc_3v3_s0>;
+ 	snps,reset-gpio = <&gpio2 RK_PB4 GPIO_ACTIVE_LOW>;
+ 	snps,reset-active-low;
+ 	snps,reset-delays-us = <0 20000 100000>;
+--- a/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-misc-devices.dtsi	2026-07-03 02:27:23.802457808 -0700
++++ b/arch/arm64/boot/dts/rockchip/rk3576-neardi-lb200-misc-devices.dtsi	2026-07-03 02:26:47.886207270 -0700
+@@ -48,7 +48,8 @@
+ 	reset-gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_HIGH>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pcie_rst>;
+-	status = "okay";
++	/* No PCIe device populated ("Phy link never came up"); saves ~1.1s boot */
++	status = "disabled";
+ };
+ 
+ &uart5 {
+@@ -57,7 +58,8 @@
+ 	rs485-rts-delay = <0 0>;
+ 	rs485-rx-during-tx;
+ 	pinctrl-names = "default";
+-	pinctrl-0 = <&uart5m2_xfer>;
++	/* uart5m2_xfer shares gpio2 PA4/PA5 with sdmmc0; use m0 instead */
++	pinctrl-0 = <&uart5m0_xfer>;
+ };
+ 
+ &can0 {
+@@ -76,8 +78,9 @@
+ 	status = "okay";
+ };
+ 
++/* SPI NOR not populated: JEDEC ID reads 00 00 00 in both SPL and Linux */
+ &sfc1 {
+-	status = "okay";
++	status = "disabled";
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&fspi1m1_pins &fspi1m1_csn0>;
+ 

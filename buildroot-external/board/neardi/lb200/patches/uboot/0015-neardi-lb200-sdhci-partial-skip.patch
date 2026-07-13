@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MCOS <support@muthur-command.com>
+Subject: [PATCH] neardi/lb200: SDHCI partial skip after vendor SPL
+
+Vendor SPL leaves eMMC hardware running. Reset/power in BL33 hangs, but
+U-Boot still needs the SDHCI host SW state (align buffer, etc.).
+---
+--- a/drivers/mmc/sdhci.c
++++ b/drivers/mmc/sdhci.c
+@@ -724,14 +724,21 @@
+ #endif
+ 
+ 	/*
+-	 * Vendor SPL already initialized eMMC.  Re-init in U-Boot proper hangs.
++	 * Vendor SPL already initialized eMMC hardware.  Reset/power in BL33
++	 * hangs, but we still need the SDHCI host SW state (align buffer, etc.).
+ 	 */
+ #if CONFIG_IS_ENABLED(DM_MMC)
++	bool skip_hw_reinit = false;
++
+ 	if (!IS_ENABLED(CONFIG_XPL_BUILD) && mmc->dev &&
+ 	    dev_read_bool(mmc->dev, "u-boot,spl-fifo-mode"))
+-		return 0;
++		skip_hw_reinit = true;
++#endif
++
++#if CONFIG_IS_ENABLED(DM_MMC)
++	if (!skip_hw_reinit)
+ #endif
+-	sdhci_reset(host, SDHCI_RESET_ALL);
++		sdhci_reset(host, SDHCI_RESET_ALL);
+ 
+ #if defined(CONFIG_FIXED_SDHCI_ALIGNED_BUFFER)
+ 	host->align_buffer = (void *)CONFIG_FIXED_SDHCI_ALIGNED_BUFFER;
+@@ -750,7 +757,10 @@
+ 	}
+ #endif
+ 
+-	sdhci_set_power(host, fls(mmc->cfg->voltages) - 1);
++#if CONFIG_IS_ENABLED(DM_MMC)
++	if (!skip_hw_reinit)
++#endif
++		sdhci_set_power(host, fls(mmc->cfg->voltages) - 1);
+ 
+ 	if (host->ops && host->ops->get_cd)
+ 		host->ops->get_cd(host);

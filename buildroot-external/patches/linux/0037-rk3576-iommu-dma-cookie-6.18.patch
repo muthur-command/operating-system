@@ -1,0 +1,91 @@
+From 0000000000000000000000000000000000000037 Mon Sep 17 00:00:00 2001
+From: mortyzhaoyu <morty.zhaoyu@gmail.com>
+Date: Fri, 3 Jul 2026 17:50:00 +0800
+Subject: [PATCH] rockchip: mpp/rga3/rknpu: fix iommu_dma_cookie mirror for
+ 6.14+
+
+The BSP MPP, RGA3 and RKNPU drivers reach into the kernel-private
+struct iommu_dma_cookie (via domain->iova_cookie) to use the IOVA
+allocator directly. Their local mirror struct starts with an
+enum iommu_dma_cookie_type followed by the iova_domain, matching
+kernels up to 6.13. Linux 6.14 removed the type member, so iovad is
+now the first member of the real cookie. With the stale mirror the
+drivers would operate on the iova_domain at a wrong offset and corrupt
+the allocator state. Drop the type member from all three mirrors.
+
+Signed-off-by: mortyzhaoyu <morty.zhaoyu@gmail.com>
+---
+ drivers/rknpu/include/rknpu_iommu.h          |  9 +++------
+ drivers/video/rockchip/mpp/mpp_iommu.h       | 11 ++++-------
+ drivers/video/rockchip/rga3/include/rga_drv.h| 10 ++++------
+ 3 files changed, 11 insertions(+), 19 deletions(-)
+
+--- a/drivers/video/rockchip/mpp/mpp_iommu.h	2026-07-03 02:54:27.069786905 -0700
++++ b/drivers/video/rockchip/mpp/mpp_iommu.h	2026-07-03 02:55:22.083740026 -0700
+@@ -16,14 +16,11 @@
+ #include <linux/interrupt.h>
+ #include <linux/iova.h>
+ 
+-enum iommu_dma_cookie_type {
+-	IOMMU_DMA_IOVA_COOKIE,
+-	IOMMU_DMA_MSI_COOKIE,
+-};
+-
+-/* Keep in mind: member order must keep align with struct iommu_dma_cookie */
++/*
++ * Mirror of the kernel-private struct iommu_dma_cookie. Linux 6.14+
++ * removed the leading cookie-type enum: iovad is now the first member.
++ */
+ struct mpp_iommu_dma_cookie {
+-	enum iommu_dma_cookie_type type;
+ 	/* Full allocator for IOMMU_DMA_IOVA_COOKIE */
+ 	struct iova_domain iovad;
+ };
+--- a/drivers/video/rockchip/rga3/include/rga_drv.h	2026-07-03 02:54:27.073787047 -0700
++++ b/drivers/video/rockchip/rga3/include/rga_drv.h	2026-07-03 02:55:31.119060690 -0700
+@@ -119,10 +119,6 @@
+ 	RGA_CMD_MASTER		= 2,
+ };
+ 
+-enum iommu_dma_cookie_type {
+-	IOMMU_DMA_IOVA_COOKIE,
+-	IOMMU_DMA_MSI_COOKIE,
+-};
+ 
+ enum rga_scheduler_status {
+ 	RGA_SCHEDULER_IDLE = 0,
+@@ -147,9 +143,11 @@
+ 	RGA_DEVICE_BUTT,
+ };
+ 
++/*
++ * Mirror of the kernel-private struct iommu_dma_cookie. Linux 6.14+
++ * removed the leading cookie-type enum: iovad is now the first member.
++ */
+ struct rga_iommu_dma_cookie {
+-	enum iommu_dma_cookie_type  type;
+-
+ 	/* Full allocator for IOMMU_DMA_IOVA_COOKIE */
+ 	struct iova_domain  iovad;
+ };
+--- a/drivers/rknpu/include/rknpu_iommu.h	2026-07-03 02:54:27.078787224 -0700
++++ b/drivers/rknpu/include/rknpu_iommu.h	2026-07-03 02:55:31.295066937 -0700
+@@ -19,14 +19,11 @@
+ 
+ #include "rknpu_drv.h"
+ 
+-enum iommu_dma_cookie_type {
+-	IOMMU_DMA_IOVA_COOKIE,
+-	IOMMU_DMA_MSI_COOKIE,
+-};
+-
++/*
++ * Mirror of the kernel-private struct iommu_dma_cookie. Linux 6.14+
++ * removed the leading cookie-type enum: iovad is now the first member.
++ */
+ struct rknpu_iommu_dma_cookie {
+-	enum iommu_dma_cookie_type type;
+-
+ 	/* Full allocator for IOMMU_DMA_IOVA_COOKIE */
+ 	struct iova_domain iovad;
+ };

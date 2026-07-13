@@ -107,7 +107,6 @@ static const struct proc_ops skw_tx_time_fops = {
 };
 #else
 static const struct file_operations skw_tx_time_fops = {
-	.owner = THIS_MODULE,
 	.open = skw_tx_time_open,
 	.read = seq_read,
 	.release = single_release,

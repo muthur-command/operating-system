@@ -23,7 +23,11 @@ mkdir -p "$(path_boot_dir)"
 mcos_pre_image
 
 # Disk & OTA
-create_disk_image
+if declare -f create_disk_image_board > /dev/null 2>&1; then
+    create_disk_image_board
+else
+    create_disk_image
+fi
 
 # Hook post image build stuff
 mcos_post_image

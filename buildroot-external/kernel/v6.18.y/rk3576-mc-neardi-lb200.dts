@@ -35,7 +35,8 @@
 	};
 
 	chosen {
-		stdout-path = "serial2:1500000n8";
+		/* Vendor firmware debug port is UART0 ("Preloader serial: 0") */
+		stdout-path = "serial0:1500000n8";
 	};
 
 	hdmi-con {
@@ -56,12 +57,22 @@
 	};
 };
 
-&uart2 {
+/* Debug console; pins already muxed by the vendor SPL, don't remux */
+&uart0 {
 	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart2m0_xfer>;
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+};
+
+/* Console is UART0; UART2 pins conflict with SPI flash (sfc1 / fspi1m1) */
+&uart2 {
+	status = "disabled";
 };
 
 &rng {
+	status = "okay";
+};
+
+&otp {
 	status = "okay";
 };
