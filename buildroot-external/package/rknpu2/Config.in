@@ -17,7 +17,6 @@ config BR2_PACKAGE_RKNPU2_ARCH
 
 config BR2_PACKAGE_RKNPU2_EXAMPLE
 	bool "Install NPU example"
-	default n
 	depends on BR2_PACKAGE_RKNPU2
 	help
 	  Install the RKNN common test example.

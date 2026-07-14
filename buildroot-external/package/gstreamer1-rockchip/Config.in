@@ -11,8 +11,9 @@ config BR2_PACKAGE_GSTREAMER1_ROCKCHIP
 
 config BR2_PREFER_ROCKCHIP_RGA
 	bool "Enable RGA plugin"
-	select BR2_PACKAGE_ROCKCHIP_RGA
 	default y
 	depends on BR2_PACKAGE_GSTREAMER1_ROCKCHIP
+	select BR2_PACKAGE_ROCKCHIP_RGA
 	help
-	  Enable the RGA (Raster Graphic Acceleration) GStreamer plugin.
+	  Enable the RGA (Raster Graphic Acceleration) GStreamer
+	  plugin.
