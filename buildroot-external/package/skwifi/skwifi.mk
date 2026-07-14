@@ -38,33 +38,30 @@ endef
 define SKWIFI_INSTALL_TARGET_CMDS
 	# Create firmware directory
 	mkdir -p $(TARGET_DIR)/lib/firmware/seekwave
-
 	# Install WiFi firmware (if available)
-	if [ -f "$(SKWIFI_SITE)/fw/SKW_WIFI_BOOT.bin" ]; then
+	if [ -f "$(SKWIFI_SITE)/fw/SKW_WIFI_BOOT.bin" ]; then \
 		install -m 644 $(SKWIFI_SITE)/fw/SKW_WIFI_BOOT.bin \
-			$(TARGET_DIR)/lib/firmware/seekwave/
+			$(TARGET_DIR)/lib/firmware/seekwave/; \
 		install -m 644 $(SKWIFI_SITE)/fw/SKW_WIFI_MISSION.bin \
-			$(TARGET_DIR)/lib/firmware/seekwave/
+			$(TARGET_DIR)/lib/firmware/seekwave/; \
 		install -m 644 $(SKWIFI_SITE)/fw/SKW_WIFI_FUS.bin \
-			$(TARGET_DIR)/lib/firmware/seekwave/
-	else
-		@echo "SKWIFI WARNING: WiFi firmware files not found"
-		@echo "SKWIFI: Copy firmware files to package/skwifi/fw/"
-	endif
-
+			$(TARGET_DIR)/lib/firmware/seekwave/; \
+	else \
+		echo "SKWIFI WARNING: WiFi firmware files not found"; \
+		echo "SKWIFI: Copy firmware files to package/skwifi/fw/"; \
+	fi
 	# Install BT firmware (if available)
-	if [ -f "$(SKWIFI_SITE)/fw/SKW_BT.bin" ]; then
+	if [ -f "$(SKWIFI_SITE)/fw/SKW_BT.bin" ]; then \
 		install -m 644 $(SKWIFI_SITE)/fw/SKW_BT.bin \
-			$(TARGET_DIR)/lib/firmware/seekwave/
-	else
-		@echo "SKWIFI WARNING: BT firmware file not found"
-	endif
-
+			$(TARGET_DIR)/lib/firmware/seekwave/; \
+	else \
+		echo "SKWIFI WARNING: BT firmware file not found"; \
+	fi
 	# Install NV files
-	if [ -d "$(SKWIFI_SITE)/nv" ]; then
+	if [ -d "$(SKWIFI_SITE)/nv" ]; then \
 		install -m 644 $(SKWIFI_SITE)/nv/* \
-			$(TARGET_DIR)/lib/firmware/seekwave/
-	endif
+			$(TARGET_DIR)/lib/firmware/seekwave/; \
+	fi
 endef
 
 define SKWIFI_INSTALL_INIT_SYSTEMD

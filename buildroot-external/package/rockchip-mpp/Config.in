@@ -3,19 +3,22 @@ menuconfig BR2_PACKAGE_ROCKCHIP_MPP
 	select BR2_PACKAGE_LIBDRM
 	help
 	  Rockchip MPP (Multimedia Processing Platform) library.
-	  MPP provides hardware-accelerated video encoding and decoding
-	  for Rockchip SoCs (RK3576, RK3588, etc.).
+	  MPP provides hardware-accelerated video encoding and
+	  decoding for Rockchip SoCs (RK3576, RK3588, etc.).
 
 	  https://github.com/rockchip-linux/mpp
 
-	config BR2_PACKAGE_ROCKCHIP_MPP_ALLOCATOR_DRM
-		bool "DRM allocator"
-		default y
-		help
-		  Enable DRM allocator support for buffer management.
+if BR2_PACKAGE_ROCKCHIP_MPP
 
-	config BR2_PACKAGE_ROCKCHIP_MPP_TESTS
-		bool "test programs"
-		default n
-		help
-		  Build and install the MPP test programs.
+config BR2_PACKAGE_ROCKCHIP_MPP_ALLOCATOR_DRM
+	bool "DRM allocator"
+	default y
+	help
+	  Enable DRM allocator support for buffer management.
+
+config BR2_PACKAGE_ROCKCHIP_MPP_TESTS
+	bool "test programs"
+	help
+	  Build and install the MPP test programs.
+
+endif
