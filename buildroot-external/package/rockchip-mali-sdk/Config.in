@@ -46,7 +46,6 @@ config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_OPENCL
 
 config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_VULKAN
 	bool "Vulkan support"
-	default n
 
 config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_GBM
 	bool "GBM support"
@@ -54,15 +53,12 @@ config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_GBM
 
 config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_X11
 	bool "X11 support"
-	default n
 
 config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_WAYLAND
 	bool "Wayland support"
-	default n
 
 config BR2_PACKAGE_ROCKCHIP_MALI_SDK_HAS_DUMMY
 	bool "Dummy platform support"
-	default n
 
 config BR2_PACKAGE_ROCKCHIP_MALI_SDK_CUSTOM_PLATFORM
 	string "Custom platform string"
