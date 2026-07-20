@@ -182,37 +182,110 @@ exit 0
 EOF
 chmod 0755 "${TARGET_DIR}/usr/libexec/mcos-ethernet-up"
 
-cat > "${TARGET_DIR}/usr/libexec/mcos-ethernet-dhcp" <<'EOF'
+cat > "${TARGET_DIR}/usr/libexec/mcos-ethernet-down" <<'EOF'
 #!/bin/sh
+# Drop DHCP lease and IPv4 config when carrier is lost (cable unplug).
 iface=${1:?iface required}
 [ -e "/sys/class/net/${iface}" ] || exit 0
 
-if [ "$(cat "/sys/class/net/${iface}/carrier" 2>/dev/null)" != "1" ]; then
-	exit 0
-fi
+pf="/run/dhclient-${iface}.pid"
 
-if ip -4 addr show dev "$iface" 2>/dev/null | grep -q ' inet ' \
-	&& ip -4 route show default dev "$iface" 2>/dev/null | grep -q .; then
-	exit 0
-fi
+echo "mcos-ethernet: carrier down on ${iface}, flushing IPv4" > /dev/kmsg
 
-if [ -f "/run/dhclient-${iface}.pid" ]; then
-	pid=$(cat "/run/dhclient-${iface}.pid" 2>/dev/null)
-	if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-		exit 0
+if [ -f "$pf" ]; then
+	pid=$(cat "$pf" 2>/dev/null)
+	if [ -n "${pid:-}" ] && kill -0 "$pid" 2>/dev/null; then
+		kill "$pid" 2>/dev/null || true
+		sleep 1
+		kill -9 "$pid" 2>/dev/null || true
 	fi
+	rm -f "$pf"
 fi
+# Also clear any orphaned dhclient for this iface.
+pkill -f "dhclient.*${iface}" 2>/dev/null || true
+
+ip -4 addr flush dev "${iface}" 2>/dev/null || true
+while ip -4 route show default dev "${iface}" 2>/dev/null | grep -q .; do
+	ip -4 route del default dev "${iface}" 2>/dev/null || break
+done
+EOF
+chmod 0755 "${TARGET_DIR}/usr/libexec/mcos-ethernet-down"
+
+cat > "${TARGET_DIR}/usr/libexec/mcos-ethernet-dhcp" <<'EOF'
+#!/bin/sh
+# Run dhclient in the foreground (-d) so systemd Type=simple keeps it alive.
+# Without -d, dhclient daemonizes, the parent exits 0, and systemd KillMode
+# (control-group) kills the child — so the interface never gets an IPv4 lease.
+iface=${1:?iface required}
+[ -e "/sys/class/net/${iface}" ] || exit 0
+
+waited=0
+while [ "$waited" -lt 30 ]; do
+	if [ "$(cat "/sys/class/net/${iface}/carrier" 2>/dev/null)" = "1" ]; then
+		break
+	fi
+	sleep 1
+	waited=$((waited + 1))
+done
+
+if [ "$(cat "/sys/class/net/${iface}/carrier" 2>/dev/null)" != "1" ]; then
+	echo "mcos-ethernet: ${iface} no carrier, skip DHCP" > /dev/kmsg
+	exit 1
+fi
+
+pf="/run/dhclient-${iface}.pid"
+lf="/var/lib/dhcp/dhclient-${iface}.leases"
+sf="/sbin/dhclient-script"
+
+# Ensure lease dir exists (tmpfiles may not have run yet).
+mkdir -p /var/lib/dhcp /run
+
+if [ -f "$pf" ]; then
+	pid=$(cat "$pf" 2>/dev/null)
+	if [ -n "${pid:-}" ] && kill -0 "$pid" 2>/dev/null; then
+		kill "$pid" 2>/dev/null || true
+		sleep 1
+		kill -9 "$pid" 2>/dev/null || true
+	fi
+	rm -f "$pf"
+fi
+pkill -f "dhclient.*${iface}" 2>/dev/null || true
 
 ip link set "${iface}" up
-echo "mcos-ethernet: starting dhclient on ${iface}" > /dev/kmsg
-exec dhclient -4 -q -pf "/run/dhclient-${iface}.pid" \
-	-lf "/var/lib/dhcp/dhclient-${iface}.leases" "${iface}"
+# Clear stale IPv4 so dhclient must rebind after replug.
+ip -4 addr flush dev "${iface}" 2>/dev/null || true
+while ip -4 route show default dev "${iface}" 2>/dev/null | grep -q .; do
+	ip -4 route del default dev "${iface}" 2>/dev/null || break
+done
+
+echo "mcos-ethernet: starting dhclient -d on ${iface}" > /dev/kmsg
+# -d: foreground (required for systemd Type=simple).
+exec dhclient -4 -d -pf "$pf" -lf "$lf" -sf "$sf" "${iface}"
 EOF
 chmod 0755 "${TARGET_DIR}/usr/libexec/mcos-ethernet-dhcp"
 
+cat > "${TARGET_DIR}/usr/libexec/mcos-ethernet-carrier" <<'EOF'
+#!/bin/sh
+# udev helper: ATTR{carrier} matching is racy; always re-check sysfs here.
+iface=${1:?iface required}
+[ -e "/sys/class/net/${iface}" ] || exit 0
+
+# Small settle delay for PHY/link state.
+sleep 1
+carrier=$(cat "/sys/class/net/${iface}/carrier" 2>/dev/null || echo 0)
+echo "mcos-ethernet: carrier event on ${iface}: ${carrier}" > /dev/kmsg
+
+if [ "$carrier" = "1" ]; then
+	/usr/bin/systemctl --no-block restart "mcos-ethernet-dhcp@${iface}.service"
+else
+	/usr/bin/systemctl --no-block stop "mcos-ethernet-dhcp@${iface}.service"
+fi
+EOF
+chmod 0755 "${TARGET_DIR}/usr/libexec/mcos-ethernet-carrier"
+
 cat > "${TARGET_DIR}/usr/libexec/mcos-ethernet-bringup" <<'EOF'
 #!/bin/sh
-# Bring up end0/end1, wait for PHY link, then DHCP.
+# Bring up end0/end1, wait for PHY link, then DHCP via systemd unit.
 wait_carrier_and_dhcp() {
 	iface=$1
 	[ -e "/sys/class/net/${iface}" ] || return
@@ -230,12 +303,15 @@ wait_carrier_and_dhcp() {
 		echo "mcos-ethernet: ${iface} no carrier after ${waited}s" > /dev/kmsg
 		return
 	fi
-	/usr/libexec/mcos-ethernet-dhcp "${iface}" &
+	echo "mcos-ethernet: ${iface} carrier up after ${waited}s, start DHCP" > /dev/kmsg
+	/usr/bin/systemctl --no-block restart "mcos-ethernet-dhcp@${iface}.service"
 }
 
 for iface in end0 end1; do
 	wait_carrier_and_dhcp "${iface}" &
 done
+# Keep oneshot alive briefly so background waiters are past the first link set.
+sleep 2
 EOF
 chmod 0755 "${TARGET_DIR}/usr/libexec/mcos-ethernet-bringup"
 
@@ -278,18 +354,22 @@ ConditionPathExists=/sys/class/net/%i
 
 [Service]
 Type=simple
+# dhclient runs with -d (foreground); keep it as MainPID.
+KillMode=control-group
 Restart=on-failure
-RestartSec=5
+RestartSec=3
 ExecStart=/usr/libexec/mcos-ethernet-dhcp %i
+ExecStop=/usr/libexec/mcos-ethernet-down %i
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 cat > "${TARGET_DIR}/usr/lib/udev/rules.d/70-lb200-ethernet.rules" <<'EOF'
-# Re-run DHCP when carrier comes up after boot (cable late / PHY slow).
-ACTION=="change", SUBSYSTEM=="net", KERNEL=="end[01]", ATTR{carrier}=="1", \
-	TAG+="systemd", ENV{SYSTEMD_WANTS}="mcos-ethernet-dhcp@%k.service"
+# Do not match ATTR{carrier} here — it races with the change event.
+# Delegate to a helper that re-reads sysfs and start/stops DHCP.
+ACTION=="change", SUBSYSTEM=="net", KERNEL=="end[01]", \
+	RUN+="/usr/libexec/mcos-ethernet-carrier %k"
 EOF
 
 cat > "${TARGET_DIR}/etc/systemd/system/mcos-ethernet.service" <<'EOF'

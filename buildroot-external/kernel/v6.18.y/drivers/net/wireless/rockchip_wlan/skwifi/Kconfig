@@ -139,7 +139,7 @@ config SKW6316_PROJECT_NAME
 
 choice
 	prompt "SKW6316 Log Level"
-	default SKW6316_LOG_DEBUG
+	default SKW6316_LOG_INFO
 	help
 	SEEKWAVE Log Level
 

@@ -1,5 +1,6 @@
 include $(sort $(wildcard $(BR2_EXTERNAL_MCOS_PATH)/package/*/*.mk))
 include $(BR2_EXTERNAL_MCOS_PATH)/board/neardi/lb200/linux-skwifi.mk
+include $(BR2_EXTERNAL_MCOS_PATH)/board/neardi/lb200/uboot-rockchip-tee.mk
 
 .PHONY: linux-check-dotconfig
 linux-check-dotconfig: linux-check-configuration-done
