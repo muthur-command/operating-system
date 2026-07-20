@@ -5,8 +5,8 @@
 # This directory should contain firmware files required for the SKW (Seekwave)
 # WiFi/BT module (SV6160/SV6158).
 #
-# IMPORTANT: The Seekwave firmware files are PROPRIETARY and NOT included in the
-# SDK. You must obtain them from Seekwave Electronics directly.
+# IMPORTANT: The Seekwave firmware files are PROPRIETARY and are stored in the
+# sibling operating-system-blobs repository, under seekwave/swt6652/fw.
 #
 # How to Obtain Firmware:
 # -----------------------
@@ -29,11 +29,8 @@
 #
 # Installation:
 # -------------
-# Copy the firmware files to this directory:
-#   /home/morty/work/share/mc_os/operating-system/buildroot-external/package/skwifi/fw/
-#
-# The SKWIFI package Makefile will install these files to:
-#   /lib/firmware/seekwave/
+# The SKWIFI package Makefile reads the blobs repository and installs the
+# firmware into /lib/firmware/.
 #
 # SDK Driver Modules:
 # -------------------

@@ -5,9 +5,8 @@
 # This directory contains NV files required for the SKW (Seekwave)
 # WiFi/BT module calibration and configuration.
 #
-# IMPORTANT: These NV files must be obtained from Seekwave or the
-# original SDK. They are NOT included in this repository due to
-# licensing restrictions.
+# IMPORTANT: These proprietary NV files are stored in the sibling
+# operating-system-blobs repository, under seekwave/swt6652/nv.
 #
 # Required Files:
 # ---------------
@@ -25,18 +24,9 @@
 #
 # Installation:
 # -------------
-# Copy these files to:
-#   - Target rootfs: /lib/firmware/seekwave/
-#   - Or kernel source: /firmware/seekwave/ (for building into kernel)
+# The SKWIFI package installs these files into /lib/firmware/.
 #
 # Note: The NV file name should match the compatible string in the
 # device tree: "seekwave,sv6160"
 #
 ################################################################################
-
-# Placeholder for NV files
-# Copy the actual NV files from SDK:
-#   cp /path/to/sdk/external/rkwifibt/nv/*.bin ./
-
-# Example command to copy from SDK:
-# cp ../../../mc_platform/rockchip_sdk/external/rkwifibt/nv/SEEKWAVE_NV_SWT6652.bin ./

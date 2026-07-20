@@ -7,10 +7,11 @@
 #
 ################################################################################
 
-SKWIFI_VERSION = 1.0
-SKWIFI_SITE = $(BR2_EXTERNAL_MCOS_PATH)/package/skwifi
-SKWIFI_SITE_METHOD = local
+SKWIFI_VERSION = 40277c633b840a0c44756c9f3a416f1696c6e01b
+SKWIFI_SITE = $(call github,muthur-command,operating-system-blobs,$(SKWIFI_VERSION))
 SKWIFI_LICENSE = Proprietary
+
+SKWIFI_BLOBS_DIR = $(@D)/seekwave/swt6652
 
 define SKWIFI_BUILD_CMDS
 	@echo "SKWIFI: driver built via kernel patches"
@@ -19,8 +20,8 @@ endef
 define SKWIFI_INSTALL_TARGET_CMDS
 	$(if $(BR2_PACKAGE_SKWIFI_FIRMWARE),\
 		mkdir -p $(TARGET_DIR)/lib/firmware && \
-		if ls $(SKWIFI_PKGDIR)/fw/*.bin >/dev/null 2>&1; then \
-			install -m 644 $(SKWIFI_PKGDIR)/fw/*.bin \
+		if ls $(SKWIFI_BLOBS_DIR)/fw/*.bin >/dev/null 2>&1; then \
+			install -m 644 $(SKWIFI_BLOBS_DIR)/fw/*.bin \
 				$(TARGET_DIR)/lib/firmware/; \
 			cd $(TARGET_DIR)/lib/firmware && \
 			ln -sf ROM_EXEC_KERNEL_IRAM.bin SWT6652_IRAM_SDIO.bin && \
@@ -29,8 +30,9 @@ define SKWIFI_INSTALL_TARGET_CMDS
 			echo "SKWIFI WARNING: no firmware in package/skwifi/fw/"; \
 			echo "SKWIFI: see package/skwifi/fw/README"; \
 		fi && \
-		if [ -d "$(SKWIFI_PKGDIR)/nv" ] && ls $(SKWIFI_PKGDIR)/nv/* >/dev/null 2>&1; then \
-			install -m 644 $(SKWIFI_PKGDIR)/nv/* \
+			if [ -d "$(SKWIFI_BLOBS_DIR)/nv" ] && \
+				ls $(SKWIFI_BLOBS_DIR)/nv/* >/dev/null 2>&1; then \
+			install -m 644 $(SKWIFI_BLOBS_DIR)/nv/* \
 				$(TARGET_DIR)/lib/firmware/; \
 		fi \
 	)
